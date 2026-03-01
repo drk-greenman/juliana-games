@@ -1,6 +1,9 @@
 import os
 import random
 import anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 ADJECTIVES = [
     "slimy", "invisible", "grumpy", "sparkly", "giant", "tiny", "backwards",
@@ -33,8 +36,8 @@ def get_client():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         print("\nOops! No API key found.")
-        print("Set your key like this before running the game:")
-        print("  export ANTHROPIC_API_KEY=your-key-here\n")
+        print("Add it to a .env file in this folder:")
+        print("  echo 'ANTHROPIC_API_KEY=your-key-here' > .env\n")
         raise SystemExit(1)
     return anthropic.Anthropic(api_key=api_key)
 
