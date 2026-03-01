@@ -10,7 +10,7 @@ ADJECTIVES = [
     "stinky", "bouncy", "frozen", "sneaky", "wobbly", "electric", "fluffy",
     "melting", "spiky", "glowing", "upside-down", "polka-dotted", "musical",
     "crunchy", "soggy", "exploding", "whispering", "stretchy", "ticklish",
-    "purple", "chaotic", "sleepy", "reverse",
+    "purple", "chaotic", "sleepy", "mutant", "mystical",
 ]
 
 NOUNS = [
@@ -18,7 +18,7 @@ NOUNS = [
     "hamster", "robot", "taco", "detective", "snail", "astronaut", "pickle",
     "dragon", "umbrella", "mailbox", "pancake", "cactus", "submarine",
     "broom", "noodle", "captain", "pineapple", "ghost", "toaster", "knight",
-    "jellyfish", "professor", "banana",
+    "jellyfish", "professor", "banana", "booger",
 ]
 
 BANNER = r"""
