@@ -13,7 +13,7 @@ pip install -r requirements.txt
 python <project-folder>/game.py     # e.g. python word-combo-story/game.py
 ```
 
-Requires an `ANTHROPIC_API_KEY` in a `.env` file in the repo root (loaded via `python-dotenv`, gitignored). It's shared across all projects — `load_dotenv()` walks up from a script's own folder to find it, so this works regardless of which project folder you run from. If the key is missing, a game should print setup instructions and exit rather than crashing (see `word-combo-story/game.py`'s `get_client()` for the pattern).
+Some projects call Claude and need an `ANTHROPIC_API_KEY` in a `.env` file in the repo root (loaded via `python-dotenv`, gitignored); others (e.g. `squirrel-fight/`) are fully offline and need no key at all — check a project's own `README.md`. When a key is needed, it's shared across all projects that use one — `load_dotenv()` walks up from a script's own folder to find it, so this works regardless of which project folder you run from. If the key is missing, a game should print setup instructions and exit rather than crashing (see `word-combo-story/game.py`'s `get_client()` for the pattern).
 
 There is no build step or linter configured in this repo. Most projects have no tests
 either, but where a project's logic is worth verifying automatically (e.g. Squirrel
