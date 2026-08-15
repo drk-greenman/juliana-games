@@ -52,7 +52,7 @@ def print_menu() -> None:
 def prompt_move(fighter_name: str):
     while True:
         choice = input(f"  {fighter_name}, pick a move (1-12): ").strip()
-        if choice.isdigit() and 1 <= int(choice) <= len(MOVES):
+        if choice.isascii() and choice.isdigit() and 1 <= int(choice) <= len(MOVES):
             return MOVES[int(choice) - 1]
         print("  Not a valid move, try again.")
 
@@ -61,7 +61,7 @@ def computer_choose_move():
     return random.choice(MOVES)
 
 
-def print_turn_result(player: Fighter, computer: Fighter, result) -> None:
+def print_turn_result(player: Fighter, computer: Fighter, player_move, computer_move, result) -> None:
     print(f"\n  {player.name} uses {result.fighter_a.move_name}!")
     print(f"  {computer.name} uses {result.fighter_b.move_name}!")
     if result.flavor_text:
@@ -70,10 +70,14 @@ def print_turn_result(player: Fighter, computer: Fighter, result) -> None:
         print(f"  {computer.name} dodges out of the way!")
     if result.fighter_a.damage_dealt:
         print(f"  {player.name} hits {computer.name} for {result.fighter_a.damage_dealt} damage!")
+    elif player_move.kind == "attack" and not result.fighter_b.dodged:
+        print(f"  {computer.name} fully blocks the attack!")
     if result.fighter_a.dodged:
         print(f"  {player.name} dodges out of the way!")
     if result.fighter_b.damage_dealt:
         print(f"  {computer.name} hits {player.name} for {result.fighter_b.damage_dealt} damage!")
+    elif computer_move.kind == "attack" and not result.fighter_a.dodged:
+        print(f"  {player.name} fully blocks the attack!")
     if result.fighter_a.healed:
         print(f"  {player.name} heals {result.fighter_a.healed} HP!")
     if result.fighter_b.healed:
@@ -87,14 +91,14 @@ def play_battle() -> None:
     computer = Fighter(name=random.choice(RIVAL_NAMES), hp=60, max_hp=60)
 
     print(f"\n  {player.name} vs. {computer.name}! Let the fight begin!\n")
+    print_status(player, computer)
 
     while True:
-        print_status(player, computer)
         print_menu()
         player_move = prompt_move(player.name)
         computer_move = computer_choose_move()
         result = resolve_turn(player, player_move, computer, computer_move)
-        print_turn_result(player, computer, result)
+        print_turn_result(player, computer, player_move, computer_move, result)
 
         outcome = battle_outcome(player, computer)
         if outcome == "draw":
