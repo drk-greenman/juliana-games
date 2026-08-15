@@ -1,0 +1,122 @@
+import random
+
+from battle import Fighter, resolve_turn, battle_outcome
+from moves import MOVES
+
+RIVAL_NAMES = [
+    "Sir Fluffington",
+    "Nutsy McGee",
+    "Bushy Malone",
+    "Duchess Acorn",
+    "Mr. Wigglebottom",
+    "Chompy Von Nutsalot",
+    "The Grey Menace",
+    "Professor Chestnut",
+]
+
+BANNER = r"""
+  #################################################
+  #                                               #
+  #               SQUIRREL FIGHT!                 #
+  #                                               #
+  #################################################
+"""
+
+HP_BAR_WIDTH = 20
+
+
+def hp_bar(fighter: Fighter) -> str:
+    filled = round((fighter.hp / fighter.max_hp) * HP_BAR_WIDTH)
+    filled = max(0, min(HP_BAR_WIDTH, filled))
+    bar = "#" * filled + "-" * (HP_BAR_WIDTH - filled)
+    return f"[{bar}] {fighter.hp}/{fighter.max_hp}"
+
+
+def print_status(player: Fighter, computer: Fighter) -> None:
+    print(f"\n  {player.name:<20} {hp_bar(player)}")
+    print(f"  {computer.name:<20} {hp_bar(computer)}\n")
+
+
+def print_menu() -> None:
+    print("  Attacks:")
+    for i, move in enumerate(MOVES[:7], start=1):
+        print(f"    {i}) {move.name} - {move.description}")
+    print("  Defenses:")
+    for i, move in enumerate(MOVES[7:11], start=8):
+        print(f"    {i}) {move.name} - {move.description}")
+    print("  Heal:")
+    for i, move in enumerate(MOVES[11:], start=12):
+        print(f"    {i}) {move.name} - {move.description}")
+
+
+def prompt_move(fighter_name: str):
+    while True:
+        choice = input(f"  {fighter_name}, pick a move (1-12): ").strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(MOVES):
+            return MOVES[int(choice) - 1]
+        print("  Not a valid move, try again.")
+
+
+def computer_choose_move():
+    return random.choice(MOVES)
+
+
+def print_turn_result(player: Fighter, computer: Fighter, result) -> None:
+    print(f"\n  {player.name} uses {result.fighter_a.move_name}!")
+    print(f"  {computer.name} uses {result.fighter_b.move_name}!")
+    if result.flavor_text:
+        print(f"  {result.flavor_text}")
+    if result.fighter_b.dodged:
+        print(f"  {computer.name} dodges out of the way!")
+    if result.fighter_a.damage_dealt:
+        print(f"  {player.name} hits {computer.name} for {result.fighter_a.damage_dealt} damage!")
+    if result.fighter_a.dodged:
+        print(f"  {player.name} dodges out of the way!")
+    if result.fighter_b.damage_dealt:
+        print(f"  {computer.name} hits {player.name} for {result.fighter_b.damage_dealt} damage!")
+    if result.fighter_a.healed:
+        print(f"  {player.name} heals {result.fighter_a.healed} HP!")
+    if result.fighter_b.healed:
+        print(f"  {computer.name} heals {result.fighter_b.healed} HP!")
+    print_status(player, computer)
+
+
+def play_battle() -> None:
+    name = input("  Name your squirrel: ").strip() or "You"
+    player = Fighter(name=name, hp=60, max_hp=60)
+    computer = Fighter(name=random.choice(RIVAL_NAMES), hp=60, max_hp=60)
+
+    print(f"\n  {player.name} vs. {computer.name}! Let the fight begin!\n")
+
+    while True:
+        print_status(player, computer)
+        print_menu()
+        player_move = prompt_move(player.name)
+        computer_move = computer_choose_move()
+        result = resolve_turn(player, player_move, computer, computer_move)
+        print_turn_result(player, computer, result)
+
+        outcome = battle_outcome(player, computer)
+        if outcome == "draw":
+            print("  Both squirrels are down! It's a draw!\n")
+            break
+        if outcome == "a_wins":
+            print(f"  {player.name} wins!\n")
+            break
+        if outcome == "b_wins":
+            print(f"  {computer.name} wins!\n")
+            break
+
+
+def main() -> None:
+    print(BANNER)
+    while True:
+        play_battle()
+        again = input("  Play again? (y/n): ").strip().lower()
+        if again not in ("y", "yes"):
+            print("\n  Thanks for playing! Bye! :)\n")
+            break
+
+
+if __name__ == "__main__":
+    main()
