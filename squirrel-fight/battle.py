@@ -46,7 +46,7 @@ def _mitigate(raw_damage: int, defending_move: Move | None) -> tuple[int, bool]:
             return 0, True
         return raw_damage, False
     if defending_move.block_reduction is not None:
-        return int(raw_damage * (1 - defending_move.block_reduction)), False
+        return max(0, int(raw_damage * (1 - defending_move.block_reduction))), False
     if defending_move.block_flat is not None:
         return max(0, raw_damage - defending_move.block_flat), False
     return raw_damage, False
