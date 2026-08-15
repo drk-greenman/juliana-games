@@ -47,6 +47,17 @@ def test_block_percentage_halves_damage(monkeypatch):
     assert b.hp == 60 - 8
 
 
+def test_block_percentage_floors_odd_damage(monkeypatch):
+    monkeypatch.setattr(battle_module.random, "randint", lambda lo, hi: 15)
+    a = Fighter(name="A", hp=60, max_hp=60)
+    b = Fighter(name="B", hp=60, max_hp=60)
+    move_a = make_attack("Scratch", (7, 17))
+    move_b = make_block_pct("Scurry", 0.5)
+    result = resolve_turn(a, move_a, b, move_b)
+    assert result.fighter_a.damage_dealt == 7  # int(15 * 0.5) == 7, not round(7.5) == 8
+    assert b.hp == 60 - 7
+
+
 def test_block_flat_reduces_by_fixed_amount(monkeypatch):
     monkeypatch.setattr(battle_module.random, "randint", lambda lo, hi: hi)
     a = Fighter(name="A", hp=60, max_hp=60)
@@ -93,6 +104,8 @@ def test_heal_restores_hp_and_is_capped_at_max(monkeypatch):
     result = resolve_turn(a, move_a, b, move_b)
     assert result.fighter_a.healed == 18
     assert a.hp == 60
+    assert b.hp == 60
+    assert result.fighter_b.dodged is False
 
 
 def test_attack_vs_heal_healer_still_takes_full_damage(monkeypatch):
@@ -105,6 +118,19 @@ def test_attack_vs_heal_healer_still_takes_full_damage(monkeypatch):
     assert result.fighter_a.healed == 18
     assert result.fighter_b.damage_dealt == 26
     assert a.hp == 12
+
+
+def test_heal_vs_heal_both_restore_hp(monkeypatch):
+    monkeypatch.setattr(battle_module.random, "randint", lambda lo, hi: hi)
+    a = Fighter(name="A", hp=40, max_hp=60)
+    b = Fighter(name="B", hp=40, max_hp=60)
+    move_a = make_heal("Eat Garden", (12, 18))
+    move_b = make_heal("Eat Garden", (12, 18))
+    result = resolve_turn(a, move_a, b, move_b)
+    assert result.fighter_a.healed == 18
+    assert result.fighter_b.healed == 18
+    assert a.hp == 58
+    assert b.hp == 58
 
 
 def test_steal_heals_attacker_by_half_of_actual_damage_dealt(monkeypatch):
