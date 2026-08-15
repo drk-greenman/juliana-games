@@ -23,7 +23,7 @@ Each game/story lives in its own folder with its own `README.md`.
 pip install -r requirements.txt
 ```
 
-Add your Anthropic API key to a `.env` file in the repo root (shared by all projects):
+Some projects use Claude and need an Anthropic API key — check a project's own `README.md` to see if it does. Add the key to a `.env` file in the repo root (shared by all projects that need one):
 
 ```bash
 echo 'ANTHROPIC_API_KEY=your-key-here' > .env
