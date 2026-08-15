@@ -600,21 +600,21 @@ if __name__ == "__main__":
 
 - [ ] **Step 2: Verify it runs a full battle without crashing**
 
-Both squirrels spamming "Tail Smack" (undefended 10-13 damage each way) will always finish within 6 rounds from 60 HP, so this scripted input reliably exercises the full loop end-to-end, including declining the replay prompt:
+**Correction (found during Task 5 review):** the player's move is scripted, but the *computer's* move is `random.choice(MOVES)` over all 12 moves — including defenses like Flex, which fully blocks Tail Smack's damage (max 13 < Flex's flat 36). If the computer keeps defending, the battle can run past a small fixed number of scripted turns, and once the piped input runs dry, `prompt_move`'s `input()` raises an uncaught `EOFError`. A short, fixed-length script (e.g. 8 turns) is therefore flaky — it was observed to crash ~40-60% of runs in review. Use a much longer scripted input stream (`yes` repeats "1" as many times as needed) so the test reliably outlasts the battle regardless of the computer's random picks:
 
 Run:
 ```bash
-cd squirrel-fight && printf 'TestSquirrel\n1\n1\n1\n1\n1\n1\n1\n1\nn\n' | python3 game.py
+cd squirrel-fight && (echo 'TestSquirrel'; yes 1 | head -80; echo n) | python3 game.py
 ```
-Expected: the banner prints, the battle plays out over several turns with HP bars and move descriptions, a winner (or draw) is announced, and the program exits cleanly after "Thanks for playing! Bye! :)" — no traceback.
+Expected: the banner prints, the battle plays out over several turns with HP bars and move descriptions, a winner (or draw) is announced, and the program exits cleanly after "Thanks for playing! Bye! :)" — no traceback. (Verified directly: 5/5 runs exited cleanly with this approach, versus frequent `EOFError` tracebacks with only 8 scripted turns.)
 
 - [ ] **Step 3: Verify invalid input is rejected without crashing**
 
 Run:
 ```bash
-cd squirrel-fight && printf 'TestSquirrel\nabc\n99\n1\n1\n1\n1\n1\n1\n1\n1\nn\n' | python3 game.py
+cd squirrel-fight && (echo 'TestSquirrel'; echo abc; echo 99; yes 1 | head -80; echo n) | python3 game.py
 ```
-Expected: two "Not a valid move, try again." lines (for `abc` and `99`) before the battle proceeds normally to completion.
+Expected: two "Not a valid move, try again." lines (for `abc` and `99`) before the battle proceeds normally to completion, exiting cleanly with no traceback.
 
 - [ ] **Step 4: Commit**
 
