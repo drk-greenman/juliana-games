@@ -9,3 +9,21 @@ This repo is also an experiment in learning how coding with Claude works — so 
 - 🎮 Funny games
 - 📖 Stories
 - 🛠️ Whatever Juliana decides to build next
+
+## Projects
+
+Each game/story lives in its own folder with its own `README.md`.
+
+- [`word-combo-story/`](word-combo-story/) — pick a silly word combo, describe it, and get a short AI-written story about it.
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+```
+
+Add your Anthropic API key to a `.env` file in the repo root (shared by all projects):
+
+```bash
+echo 'ANTHROPIC_API_KEY=your-key-here' > .env
+```
