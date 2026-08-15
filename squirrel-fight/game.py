@@ -70,13 +70,13 @@ def print_turn_result(player: Fighter, computer: Fighter, player_move, computer_
         print(f"  {computer.name} dodges out of the way!")
     if result.fighter_a.damage_dealt:
         print(f"  {player.name} hits {computer.name} for {result.fighter_a.damage_dealt} damage!")
-    elif player_move.kind == "attack" and not result.fighter_b.dodged:
+    elif player_move.kind == "attack" and (computer_move.block_reduction is not None or computer_move.block_flat is not None):
         print(f"  {computer.name} fully blocks the attack!")
     if result.fighter_a.dodged:
         print(f"  {player.name} dodges out of the way!")
     if result.fighter_b.damage_dealt:
         print(f"  {computer.name} hits {player.name} for {result.fighter_b.damage_dealt} damage!")
-    elif computer_move.kind == "attack" and not result.fighter_a.dodged:
+    elif computer_move.kind == "attack" and (player_move.block_reduction is not None or player_move.block_flat is not None):
         print(f"  {player.name} fully blocks the attack!")
     if result.fighter_a.healed:
         print(f"  {player.name} heals {result.fighter_a.healed} HP!")
