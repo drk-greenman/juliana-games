@@ -15,6 +15,7 @@ This repo is also an experiment in learning how coding with Claude works — so 
 Each game/story lives in its own folder with its own `README.md`.
 
 - [`word-combo-story/`](word-combo-story/) — pick a silly word combo, describe it, and get a short AI-written story about it.
+- [`squirrel-fight/`](squirrel-fight/) — name your squirrel and duel a randomly-named rival with silly attack, defense, and heal moves.
 
 ## Setup
 
