@@ -56,6 +56,11 @@ def _clamp(value: int, low: int, high: int) -> int:
     return max(low, min(high, value))
 
 
+def _capped_heal(raw_heal: int, hp_before: int, damage_taken: int, max_hp: int) -> int:
+    room = max_hp - (hp_before - damage_taken)
+    return max(0, min(raw_heal, room))
+
+
 def resolve_turn(fighter_a: Fighter, move_a: Move, fighter_b: Fighter, move_b: Move) -> TurnResult:
     outcome_a = FighterTurnOutcome(move_name=move_a.name)
     outcome_b = FighterTurnOutcome(move_name=move_b.name)
@@ -70,8 +75,6 @@ def resolve_turn(fighter_a: Fighter, move_a: Move, fighter_b: Fighter, move_b: M
         dmg_a_to_b, b_dodged = _mitigate(raw, defending)
         if defending is not None and defending.dodge_chance is not None:
             outcome_b.dodged = b_dodged
-        if move_a.lifesteal:
-            outcome_a.healed += dmg_a_to_b // 2
 
     if move_b.kind == "attack":
         raw = _roll_damage(move_b)
@@ -79,14 +82,18 @@ def resolve_turn(fighter_a: Fighter, move_a: Move, fighter_b: Fighter, move_b: M
         dmg_b_to_a, a_dodged = _mitigate(raw, defending)
         if defending is not None and defending.dodge_chance is not None:
             outcome_a.dodged = a_dodged
-        if move_b.lifesteal:
-            outcome_b.healed += dmg_b_to_a // 2
+
+    if move_a.kind == "attack" and move_a.lifesteal:
+        outcome_a.healed += _capped_heal(dmg_a_to_b // 2, fighter_a.hp, dmg_b_to_a, fighter_a.max_hp)
+
+    if move_b.kind == "attack" and move_b.lifesteal:
+        outcome_b.healed += _capped_heal(dmg_b_to_a // 2, fighter_b.hp, dmg_a_to_b, fighter_b.max_hp)
 
     if move_a.kind == "heal":
-        outcome_a.healed += _roll_heal(move_a)
+        outcome_a.healed += _capped_heal(_roll_heal(move_a), fighter_a.hp, dmg_b_to_a, fighter_a.max_hp)
 
     if move_b.kind == "heal":
-        outcome_b.healed += _roll_heal(move_b)
+        outcome_b.healed += _capped_heal(_roll_heal(move_b), fighter_b.hp, dmg_a_to_b, fighter_b.max_hp)
 
     if move_a.kind == "defense" and move_b.kind == "defense":
         flavor_text = "Both squirrels eye each other warily, neither committing to a move."

@@ -102,7 +102,7 @@ def test_heal_restores_hp_and_is_capped_at_max(monkeypatch):
     move_a = make_heal("Eat Garden", (12, 18))
     move_b = make_dodge("Dance", 0.5)
     result = resolve_turn(a, move_a, b, move_b)
-    assert result.fighter_a.healed == 18
+    assert result.fighter_a.healed == 5
     assert a.hp == 60
     assert b.hp == 60
     assert result.fighter_b.dodged is False
