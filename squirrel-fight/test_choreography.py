@@ -65,3 +65,19 @@ def test_two_cues_on_one_squirrel_stack():
     frame = sample(timeline, 100)
     assert frame.actors[RIVAL].tint > 0
     assert frame.actors[RIVAL].offset_x != 0
+
+
+def test_glow_brightens_and_lifts_the_healer():
+    lit = _effect_state("glow", 0.5, 210, 1)
+    assert lit.glow > 0
+    assert lit.offset_y < 0
+
+
+@pytest.mark.parametrize("effect", ["lunge", "stagger", "hop", "brace", "faint"])
+def test_effects_mirror_for_the_rival(effect):
+    player = _effect_state(effect, 0.5, 250, 1)
+    rival = _effect_state(effect, 0.5, 250, -1)
+    # Guard against the assertions below passing vacuously on an all-zero state.
+    assert (player.offset_x, player.rotation) != (0.0, 0.0)
+    assert rival.offset_x == -player.offset_x
+    assert rival.rotation == -player.rotation
