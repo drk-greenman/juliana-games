@@ -167,3 +167,131 @@ def _effect_state(effect: str, progress: float, elapsed_ms: int, facing: int) ->
             alpha=1.0 - 0.45 * fallen,
         )
     return ActorState()
+
+
+def build_timeline(
+    player_name,
+    rival_name,
+    player_move,
+    rival_move,
+    result,
+    hp_before,
+    hp_after,
+    max_hp,
+) -> Timeline:
+    """Lay out one resolved turn as cues, captions and HP slides.
+
+    `hp_before` and `hp_after` are `{PLAYER: int, RIVAL: int}`. The caller must
+    capture `hp_before` *before* calling `battle.resolve_turn()`, which mutates
+    `Fighter.hp` in place. Nothing here re-simulates the fight; it only shows a
+    result that has already been computed. Both fighters share one `max_hp`.
+    """
+    names = {PLAYER: player_name, RIVAL: rival_name}
+    moves = {PLAYER: player_move, RIVAL: rival_move}
+    cues = []
+    captions = []
+    hp_events = {PLAYER: [], RIVAL: []}
+
+    rival_start_ms = ACTION_MS + GAP_MS
+    sides = (
+        (PLAYER, RIVAL, result.fighter_a, result.fighter_b, 0),
+        (RIVAL, PLAYER, result.fighter_b, result.fighter_a, rival_start_ms),
+    )
+
+    for actor, other, own, other_outcome, start_ms in sides:
+        move = moves[actor]
+        captions.append((start_ms, "{} uses {}!".format(names[actor], move.name)))
+
+        if move.kind == "attack":
+            cues.append(Cue(start_ms, ACTION_MS, actor, "lunge"))
+            hit_ms = start_ms + IMPACT_MS
+            if other_outcome.dodged:
+                cues.append(Cue(start_ms + DODGE_MS, HOP_MS, other, "hop"))
+                captions.append((hit_ms, "{} dodges out of the way!".format(names[other])))
+            elif own.damage_dealt > 0:
+                cues.append(Cue(hit_ms, STAGGER_MS, other, "stagger"))
+                cues.append(Cue(hit_ms, FLASH_MS, other, "flash"))
+                captions.append((hit_ms, "{} hits {} for {} damage!".format(
+                    names[actor], names[other], own.damage_dealt)))
+                hp_events[other].append((hit_ms, HP_MS, -own.damage_dealt))
+            else:
+                cues.append(Cue(hit_ms, BRACE_MS, other, "brace"))
+                captions.append((hit_ms, "{} shrugs it off!".format(names[other])))
+            if move.lifesteal and own.healed > 0:
+                cues.append(Cue(hit_ms, GLOW_MS, actor, "glow"))
+                captions.append((hit_ms + 120, "{} steals {} HP!".format(
+                    names[actor], own.healed)))
+                hp_events[actor].append((hit_ms + 120, HP_MS, own.healed))
+
+        elif move.kind == "defense":
+            # If the other squirrel is attacking, this one already gets a hop or
+            # brace as a reaction inside that attack's window. Only add a stance
+            # of its own when there is no attack to react to.
+            if moves[other].kind != "attack":
+                cues.append(Cue(start_ms, BRACE_MS, actor, "brace"))
+
+        elif move.kind == "heal":
+            cues.append(Cue(start_ms, GLOW_MS, actor, "glow"))
+            if own.healed > 0:
+                captions.append((start_ms + 200, "{} heals {} HP!".format(
+                    names[actor], own.healed)))
+                hp_events[actor].append((start_ms + 200, HP_MS, own.healed))
+
+    if result.flavor_text:
+        captions.append((rival_start_ms + 350, result.flavor_text))
+
+    hp_tweens = _build_hp_tweens(hp_events, hp_before, hp_after, max_hp)
+
+    end_of_action_ms = rival_start_ms + ACTION_MS
+    knocked_out = [actor for actor in ACTORS if hp_after[actor] <= 0]
+
+    candidates = (
+        [end_of_action_ms]
+        + [cue.start_ms + cue.duration_ms for cue in cues]
+        + [start for start, _ in captions]
+        + [tween.start_ms + tween.duration_ms for tween in hp_tweens]
+    )
+    if knocked_out:
+        # The timeline has to outlast the topple, or the faint cue gets cut off
+        # part-way and the squirrel freezes at a half-fallen angle.
+        candidates.append(end_of_action_ms + FAINT_MS)
+    total_ms = max(candidates) + TAIL_MS
+
+    for actor in knocked_out:
+        # Stretched to the end of the timeline so the squirrel stays down.
+        cues.append(Cue(end_of_action_ms, total_ms - end_of_action_ms, actor, "faint"))
+        captions.append((end_of_action_ms + 120, "{} is down!".format(names[actor])))
+
+    captions.sort(key=lambda caption: caption[0])
+    return Timeline(
+        cues=cues,
+        captions=captions,
+        hp_tweens=hp_tweens,
+        hp_start=dict(hp_before),
+        total_ms=total_ms,
+    )
+
+
+def _build_hp_tweens(hp_events, hp_before, hp_after, max_hp):
+    """Chain each squirrel's HP changes so the last one lands exactly on `hp_after`.
+
+    A squirrel can both heal and take damage in one turn (Eat Garden against an
+    attack), so it can need two slides. `battle.py` clamps the *net* change, so
+    intermediate values are clamped for display only and the final slide is
+    pinned to the real post-turn HP rather than recomputed.
+    """
+    tweens = []
+    for actor in ACTORS:
+        events = sorted(hp_events[actor])
+        current = hp_before[actor]
+        for index, (start_ms, duration_ms, delta) in enumerate(events):
+            is_last = index == len(events) - 1
+            if is_last:
+                target = hp_after[actor]
+            else:
+                target = max(0, min(max_hp, current + delta))
+            if target != current:
+                tweens.append(HpTween(actor, start_ms, duration_ms, current, target))
+            current = target
+    tweens.sort(key=lambda tween: tween.start_ms)
+    return tweens
