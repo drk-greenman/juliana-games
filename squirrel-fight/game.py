@@ -103,28 +103,30 @@ def computer_choose_move():
     return random.choice(MOVES)
 
 
-def print_turn_result(player: Fighter, computer: Fighter, player_move, computer_move, result) -> None:
-    print(f"\n  {player.name} uses {result.fighter_a.move_name}!")
-    print(f"  {computer.name} uses {result.fighter_b.move_name}!")
+def format_turn_result_lines(player: Fighter, computer: Fighter, player_move, computer_move, result) -> list[str]:
+    lines = [
+        f"  {player.name} uses {result.fighter_a.move_name}!",
+        f"  {computer.name} uses {result.fighter_b.move_name}!",
+    ]
     if result.flavor_text:
-        print(f"  {result.flavor_text}")
+        lines.append(f"  {result.flavor_text}")
     if result.fighter_b.dodged:
-        print(f"  {computer.name} dodges out of the way!")
+        lines.append(f"  {computer.name} dodges out of the way!")
     if result.fighter_a.damage_dealt:
-        print(f"  {player.name} hits {computer.name} for {result.fighter_a.damage_dealt} damage!")
+        lines.append(f"  {player.name} hits {computer.name} for {result.fighter_a.damage_dealt} damage!")
     elif player_move.kind == "attack" and (computer_move.block_reduction is not None or computer_move.block_flat is not None):
-        print(f"  {computer.name} fully blocks the attack!")
+        lines.append(f"  {computer.name} fully blocks the attack!")
     if result.fighter_a.dodged:
-        print(f"  {player.name} dodges out of the way!")
+        lines.append(f"  {player.name} dodges out of the way!")
     if result.fighter_b.damage_dealt:
-        print(f"  {computer.name} hits {player.name} for {result.fighter_b.damage_dealt} damage!")
+        lines.append(f"  {computer.name} hits {player.name} for {result.fighter_b.damage_dealt} damage!")
     elif computer_move.kind == "attack" and (player_move.block_reduction is not None or player_move.block_flat is not None):
-        print(f"  {player.name} fully blocks the attack!")
+        lines.append(f"  {player.name} fully blocks the attack!")
     if result.fighter_a.healed:
-        print(f"  {player.name} heals {result.fighter_a.healed} HP!")
+        lines.append(f"  {player.name} heals {result.fighter_a.healed} HP!")
     if result.fighter_b.healed:
-        print(f"  {computer.name} heals {result.fighter_b.healed} HP!")
-    print_status(player, computer)
+        lines.append(f"  {computer.name} heals {result.fighter_b.healed} HP!")
+    return lines
 
 
 def play_battle() -> None:
