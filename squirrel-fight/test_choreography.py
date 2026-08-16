@@ -232,3 +232,82 @@ def test_a_double_knockout_announces_the_draw_once():
     knockouts = [text for _, text in timeline.captions if "down" in text]
     assert knockouts == ["Both squirrels are down! It's a draw!"]
     assert sample(timeline, timeline.total_ms).caption == knockouts[0]
+
+
+def test_hp_slide_ends_on_the_real_post_turn_value():
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Tail Smack", damage_dealt=12),
+        fighter_b=FighterTurnOutcome(move_name="Flex"),
+    )
+    timeline = build(attack_move(), block_move(), result,
+                     hp_before=FULL_HP, hp_after={PLAYER: 60, RIVAL: 48})
+    assert sample(timeline, timeline.total_ms).hp == {PLAYER: 60, RIVAL: 48}
+
+
+def test_hp_starts_at_the_pre_turn_value():
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Tail Smack", damage_dealt=12),
+        fighter_b=FighterTurnOutcome(move_name="Flex"),
+    )
+    timeline = build(attack_move(), block_move(), result,
+                     hp_before=FULL_HP, hp_after={PLAYER: 60, RIVAL: 48})
+    assert sample(timeline, 0).hp == {PLAYER: 60, RIVAL: 60}
+
+
+def test_healing_and_taking_damage_in_one_turn_still_lands_exactly():
+    # Eat Garden while the rival attacks: two slides for the player, and the
+    # last one must land on the real post-turn HP.
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Eat Garden", healed=15),
+        fighter_b=FighterTurnOutcome(move_name="Scratch", damage_dealt=10),
+    )
+    timeline = build(heal_move(), attack_move("Scratch"), result,
+                     hp_before={PLAYER: 55, RIVAL: 60}, hp_after={PLAYER: 60, RIVAL: 60})
+    player_tweens = [tween for tween in timeline.hp_tweens if tween.actor == PLAYER]
+    assert len(player_tweens) >= 1
+    assert sample(timeline, timeline.total_ms).hp[PLAYER] == 60
+
+
+def test_captions_are_ordered_and_sample_returns_the_most_recent():
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Tail Smack", damage_dealt=12),
+        fighter_b=FighterTurnOutcome(move_name="Scratch", damage_dealt=9),
+    )
+    timeline = build(attack_move(), attack_move("Scratch"), result,
+                     hp_before=FULL_HP, hp_after={PLAYER: 51, RIVAL: 48})
+    starts = [start for start, _ in timeline.captions]
+    assert starts == sorted(starts)
+    assert sample(timeline, 0).caption == "Juliana uses Tail Smack!"
+    assert "JOHN CENA" in sample(timeline, timeline.total_ms).caption
+
+
+def test_total_ms_covers_every_cue():
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Tail Smack", damage_dealt=12),
+        fighter_b=FighterTurnOutcome(move_name="Scratch", damage_dealt=9),
+    )
+    timeline = build(attack_move(), attack_move("Scratch"), result,
+                     hp_before=FULL_HP, hp_after={PLAYER: 51, RIVAL: 48})
+    assert timeline.total_ms >= max(c.start_ms + c.duration_ms for c in timeline.cues)
+
+
+def test_a_knocked_out_squirrel_faints_and_stays_down():
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Tail Smack", damage_dealt=12),
+        fighter_b=FighterTurnOutcome(move_name="Flex"),
+    )
+    timeline = build(attack_move(), block_move(), result,
+                     hp_before={PLAYER: 60, RIVAL: 12}, hp_after={PLAYER: 60, RIVAL: 0})
+    assert "faint" in effects_for(timeline, RIVAL)
+    assert abs(sample(timeline, timeline.total_ms).actors[RIVAL].rotation) == 90.0
+
+
+def test_nobody_faints_while_both_are_standing():
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Tail Smack", damage_dealt=12),
+        fighter_b=FighterTurnOutcome(move_name="Flex"),
+    )
+    timeline = build(attack_move(), block_move(), result,
+                     hp_before=FULL_HP, hp_after={PLAYER: 60, RIVAL: 48})
+    assert "faint" not in effects_for(timeline, PLAYER)
+    assert "faint" not in effects_for(timeline, RIVAL)
