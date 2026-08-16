@@ -5,14 +5,18 @@ from battle import Fighter, resolve_turn, battle_outcome
 from moves import MOVES
 
 RIVAL_NAMES = [
-    "Sir Fluffington",
+    "BIG BUMBOY",
     "Nutsy McGee",
-    "Bushy Malone",
-    "Duchess Acorn",
-    "Mr. Wigglebottom",
+    "Bushy Malone godski",
+    "Duchess Acornald",
+    "Mr. tickle bum",
     "Chompy Von Nutsalot",
-    "The Grey Menace",
-    "Professor Chestnut",
+    "lord o Grey Menace",
+    "SIR NUTS ALOT",
+    "sherlock gnomes",
+    "lord acornut",
+    "JOHN CENA",
+    "ELON MUST",
 ]
 
 BANNER = r"""
