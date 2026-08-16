@@ -311,3 +311,23 @@ def test_nobody_faints_while_both_are_standing():
                      hp_before=FULL_HP, hp_after={PLAYER: 60, RIVAL: 48})
     assert "faint" not in effects_for(timeline, PLAYER)
     assert "faint" not in effects_for(timeline, RIVAL)
+
+
+def test_a_heal_that_overflows_is_clamped_before_the_damage_lands():
+    # Eat Garden heals past full while the rival lands a big hit. The bar has to
+    # slide up to exactly max HP -- never past it -- and only then slide back
+    # down, finishing on the real post-turn value. This is the two-slide chain
+    # that `test_healing_and_taking_damage_in_one_turn_still_lands_exactly`
+    # describes but whose fixture collapses to a single slide.
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Eat Garden", healed=15),
+        fighter_b=FighterTurnOutcome(move_name="Scratch", damage_dealt=25),
+    )
+    timeline = build(heal_move(), attack_move("Scratch"), result,
+                     hp_before={PLAYER: 55, RIVAL: 60}, hp_after={PLAYER: 45, RIVAL: 60})
+    player_tweens = [tween for tween in timeline.hp_tweens if tween.actor == PLAYER]
+    assert len(player_tweens) == 2
+    assert player_tweens[0].hp_from == 55
+    assert player_tweens[0].hp_to == 60     # clamped down from 70, not overshooting
+    assert player_tweens[1].hp_to == 45     # pinned to the real post-turn HP
+    assert sample(timeline, timeline.total_ms).hp[PLAYER] == 45
