@@ -260,7 +260,14 @@ def build_timeline(
     for actor in knocked_out:
         # Stretched to the end of the timeline so the squirrel stays down.
         cues.append(Cue(end_of_action_ms, total_ms - end_of_action_ms, actor, "faint"))
-        captions.append((end_of_action_ms + 120, "{} is down!".format(names[actor])))
+
+    if len(knocked_out) == len(ACTORS):
+        # Both toppled at once. Two captions on the same millisecond would hide
+        # one of them, and the terminal version says it as a single line too.
+        captions.append((end_of_action_ms + 120, "Both squirrels are down! It's a draw!"))
+    else:
+        for actor in knocked_out:
+            captions.append((end_of_action_ms + 120, "{} is down!".format(names[actor])))
 
     captions.sort(key=lambda caption: caption[0])
     return Timeline(

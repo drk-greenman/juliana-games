@@ -218,3 +218,17 @@ def test_a_defender_facing_no_attack_still_braces_once():
     timeline = build(dodge_move(), block_move(), result)
     assert "brace" in effects_for(timeline, PLAYER)
     assert "brace" in effects_for(timeline, RIVAL)
+
+
+def test_a_double_knockout_announces_the_draw_once():
+    result = TurnResult(
+        fighter_a=FighterTurnOutcome(move_name="Tail Smack", damage_dealt=12),
+        fighter_b=FighterTurnOutcome(move_name="Scratch", damage_dealt=9),
+    )
+    timeline = build(attack_move(), attack_move("Scratch"), result,
+                     hp_before={PLAYER: 8, RIVAL: 5}, hp_after={PLAYER: 0, RIVAL: 0})
+    assert "faint" in effects_for(timeline, PLAYER)
+    assert "faint" in effects_for(timeline, RIVAL)
+    knockouts = [text for _, text in timeline.captions if "down" in text]
+    assert knockouts == ["Both squirrels are down! It's a draw!"]
+    assert sample(timeline, timeline.total_ms).caption == knockouts[0]
