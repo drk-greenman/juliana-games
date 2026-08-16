@@ -68,6 +68,29 @@ def print_move_details() -> None:
         print(f"  {color}  {i}) {move.name} - {move.description}{COLOR_RESET}")
 
 
+def _print_move_row_group(entries: list[str], color: str, row_size: int) -> None:
+    for i in range(0, len(entries), row_size):
+        row = entries[i:i + row_size]
+        print(f"  {color}  " + "   ".join(row) + COLOR_RESET)
+
+
+def print_menu_compact() -> None:
+    color = MOVE_KIND_COLOR["attack"]
+    print(f"  {color}Attacks:{COLOR_RESET}")
+    entries = [f"{i}) {move.name}" for i, move in enumerate(MOVES[:7], start=1)]
+    _print_move_row_group(entries, color, row_size=3)
+
+    color = MOVE_KIND_COLOR["defense"]
+    print(f"  {color}Defenses:{COLOR_RESET}")
+    entries = [f"{i}) {move.name}" for i, move in enumerate(MOVES[7:11], start=8)]
+    _print_move_row_group(entries, color, row_size=4)
+
+    color = MOVE_KIND_COLOR["heal"]
+    print(f"  {color}Heal:{COLOR_RESET}")
+    entries = [f"{i}) {move.name}" for i, move in enumerate(MOVES[11:], start=12)]
+    _print_move_row_group(entries, color, row_size=4)
+
+
 def prompt_move(fighter_name: str):
     while True:
         choice = input(f"  {fighter_name}, pick a move (1-12): ").strip()
