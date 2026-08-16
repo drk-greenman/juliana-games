@@ -93,7 +93,12 @@ def print_menu_compact() -> None:
 
 def prompt_move(fighter_name: str):
     while True:
-        choice = input(f"  {fighter_name}, pick a move (1-12): ").strip()
+        choice = input(f"  {fighter_name}, pick a move (1-12, or ? for move details): ").strip()
+        if choice == "?":
+            print()
+            print_move_details()
+            print()
+            continue
         if choice.isascii() and choice.isdigit() and 1 <= int(choice) <= len(MOVES):
             return MOVES[int(choice) - 1]
         print("  Not a valid move, try again.")
