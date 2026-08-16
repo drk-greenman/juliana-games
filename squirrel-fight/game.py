@@ -49,6 +49,10 @@ def print_status(player: Fighter, computer: Fighter) -> None:
     print(f"  {computer.name:<20} {hp_bar(computer)}\n")
 
 
+def print_header(player: Fighter, computer: Fighter) -> None:
+    print(f"  🐿️  SQUIRREL FIGHT — {player.name} vs. {computer.name}")
+
+
 def print_menu() -> None:
     print("  Attacks:")
     for i, move in enumerate(MOVES[:7], start=1):
