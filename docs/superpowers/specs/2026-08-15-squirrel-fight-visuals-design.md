@@ -71,7 +71,9 @@ class ActorState:
     offset_y: float = 0.0
     rotation: float = 0.0
     scale: float = 1.0
-    tint: float = 0.0        # 0.0 = normal, 1.0 = fully flashed
+    tint: float = 0.0        # red "just got hit" flash, 0.0 = normal
+    glow: float = 0.0        # green healing glow, 0.0 = normal
+    alpha: float = 1.0       # fades out during `faint`
 
 @dataclass(frozen=True)
 class HpTween:
@@ -103,6 +105,8 @@ build_timeline(
     player_move: Move, rival_move: Move,
     result: TurnResult,
     hp_before: dict[str, int],        # {"player": 42, "rival": 36}
+    hp_after: dict[str, int],         # same shape, captured after resolve_turn()
+    max_hp: int,                      # both fighters share one maximum
 ) -> Timeline
 
 sample(timeline: Timeline, t_ms: int) -> FrameState
@@ -134,17 +138,25 @@ beats the terminal version prints.
 ### HP snapshot
 
 `resolve_turn()` mutates `Fighter.hp` in place. `visual_game.py` must therefore
-record both fighters' HP *before* calling it and pass those values in as `hp_before`.
-The timeline tweens each bar from the old value to the already-final new one. The
-animation never re-simulates the fight — it only visualises a result that has
-already been computed.
+record both fighters' HP *before* calling it and pass those values in as `hp_before`,
+then read the post-turn values straight off the fighters as `hp_after`. The timeline
+tweens each bar from the old value to the already-final new one. The animation never
+re-simulates the fight — it only visualises a result that has already been computed.
+
+A fighter can both heal and take damage in one turn (`Eat Garden` against an attack),
+which needs two chained slides. `battle.py` clamps the *net* change rather than each
+part, so an intermediate value computed by adding one part to `hp_before` can
+disagree with the real result. The last slide for each fighter is therefore pinned
+directly to `hp_after` rather than recomputed, and `max_hp` is only used to keep the
+intermediate value on the bar.
 
 ## `sprites.py` — art loading and fallback
 
-One function is the whole interface:
+Two functions are the whole interface:
 
 ```python
 load_pose(actor: str, pose: str) -> pygame.Surface
+load_background() -> pygame.Surface | None   # None when assets/background.png is absent
 ```
 
 It looks for `assets/{actor}_{pose}.png`. If the file is missing, unreadable, or
@@ -194,7 +206,12 @@ Move buttons reuse the terminal version's colour scheme — attacks red, defense
 cyan, heal green — so the two versions read as the same game. Hovering a move shows
 its `description` in the message strip; this replaces the terminal version's `?`
 command, making descriptions always one hover away rather than a separate screen.
-Number keys 1–12 work as shortcuts for the corresponding move. Esc quits.
+Esc quits.
+
+Keyboard shortcuts run along the number row in move order: `1`–`9` select moves 1–9,
+then `0`, `-` and `=` continue onto moves 10, 11 and 12. A single keystroke cannot
+express "12", so the row is extended rather than adding two-digit entry. Buttons stay
+labelled with the move's real number (1–12), matching the terminal version.
 
 Choosing a move resolves the turn immediately, then plays the resulting timeline.
 During playback the buttons are greyed out and ignore input, and the message strip
