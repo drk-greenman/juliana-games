@@ -64,6 +64,17 @@ SHORTCUT_KEYS = (
     pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0, pygame.K_MINUS, pygame.K_EQUALS,
 )
 
+# Adding a move to moves.py without also giving it a button and a shortcut key
+# would silently drop it from the window version. Fail at startup instead.
+_BUTTON_SLOTS = sum(last - first for _, first, last in BUTTON_ROWS)
+if len(MOVES) != len(SHORTCUT_KEYS) or len(MOVES) != _BUTTON_SLOTS:
+    raise RuntimeError(
+        "moves.py has {} moves, but visual_game.py lays out {} buttons and {} "
+        "shortcut keys. Update BUTTON_ROWS and SHORTCUT_KEYS to match.".format(
+            len(MOVES), _BUTTON_SLOTS, len(SHORTCUT_KEYS)
+        )
+    )
+
 
 class Button:
     def __init__(self, rect, move, number):
@@ -219,14 +230,15 @@ class Game:
     def _draw_hp_panel(self):
         pygame.draw.rect(self.screen, COLOR_PANEL, (0, 0, WINDOW_SIZE[0], STAGE_TOP))
         hp = self._current_hp()
-        self._draw_hp_bar(24, self.player.name, hp[PLAYER], COLOR_HP_GOOD, False)
+        self._draw_hp_bar(24, self.player.name, hp[PLAYER], self.player.max_hp,
+                          COLOR_HP_GOOD, False)
         self._draw_hp_bar(WINDOW_SIZE[0] - 24 - 380, self.rival.name, hp[RIVAL],
-                          COLOR_HP_BAD, True)
+                          self.rival.max_hp, COLOR_HP_BAD, True)
 
-    def _draw_hp_bar(self, left, name, hp, color, right_aligned):
+    def _draw_hp_bar(self, left, name, hp, max_hp, color, right_aligned):
         width = 380
         label = self.bold.render(name, True, COLOR_TEXT)
-        amount = self.font.render("{} / {}".format(max(0, hp), START_HP), True, COLOR_DIM)
+        amount = self.font.render("{} / {}".format(max(0, hp), max_hp), True, COLOR_DIM)
         if right_aligned:
             self.screen.blit(label, (left + width - label.get_width(), 14))
             self.screen.blit(amount, (left + width - amount.get_width(), 62))
@@ -236,7 +248,7 @@ class Game:
 
         track = pygame.Rect(left, 40, width, 16)
         pygame.draw.rect(self.screen, COLOR_TRACK, track, border_radius=8)
-        filled = int(width * max(0, min(START_HP, hp)) / START_HP)
+        filled = int(width * max(0, min(max_hp, hp)) / max_hp)
         if filled > 0:
             fill = pygame.Rect(left + (width - filled if right_aligned else 0), 40, filled, 16)
             pygame.draw.rect(self.screen, color, fill, border_radius=8)
