@@ -177,12 +177,31 @@ class Game:
         return None
 
     def take_turn(self, move):
-        raise NotImplementedError("Task 8 wires this up")
+        rival_move = random.choice(MOVES)
+        # resolve_turn() mutates Fighter.hp in place, so snapshot first.
+        hp_before = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
+        result = resolve_turn(self.player, move, self.rival, rival_move)
+        hp_after = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
+        self.timeline = build_timeline(
+            self.player.name, self.rival.name, move, rival_move, result,
+            hp_before, hp_after, self.player.max_hp,
+        )
+        self.elapsed_ms = 0
+        self.frame = sample(self.timeline, 0)
+        self.outcome = battle_outcome(self.player, self.rival)
+        self.hover = None
+        self.state = "animating"
 
     # ----- per-frame -----------------------------------------------------
 
     def update(self, dt_ms):
-        pass
+        if self.state != "animating":
+            return
+        self.elapsed_ms = min(self.elapsed_ms + dt_ms, self.timeline.total_ms)
+        self.frame = sample(self.timeline, self.elapsed_ms)
+        if self.elapsed_ms >= self.timeline.total_ms:
+            self.message = self.frame.caption
+            self.state = "result" if self.outcome != "ongoing" else "battle"
 
     def draw(self):
         if self.state == "title":
@@ -315,8 +334,32 @@ class Game:
             text = self.bold.render(caption, True, text_color)
             self.screen.blit(text, text.get_rect(center=button.rect.center))
 
+    def _outcome_text(self):
+        if self.outcome == "draw":
+            return "Both squirrels are down! It's a draw!"
+        if self.outcome == "a_wins":
+            return "{} wins!".format(self.player.name)
+        if self.outcome == "b_wins":
+            return "{} wins!".format(self.rival.name)
+        return ""
+
     def _draw_result_overlay(self):
-        pass
+        shade = pygame.Surface(WINDOW_SIZE, pygame.SRCALPHA)
+        shade.fill((0, 0, 0, 150))
+        self.screen.blit(shade, (0, 0))
+
+        panel = pygame.Rect(0, 0, 560, 190)
+        panel.center = (WINDOW_SIZE[0] // 2, WINDOW_SIZE[1] // 2)
+        pygame.draw.rect(self.screen, COLOR_PANEL, panel, border_radius=12)
+        pygame.draw.rect(self.screen, COLOR_DIM, panel, width=2, border_radius=12)
+
+        headline = self.title_font.render(self._outcome_text(), True, COLOR_TEXT)
+        if headline.get_width() > panel.width - 40:
+            headline = self.bold.render(self._outcome_text(), True, COLOR_TEXT)
+        self.screen.blit(headline, headline.get_rect(center=(panel.centerx, panel.centery - 28)))
+
+        prompt = self.font.render("Press Enter to play again, or Esc to quit.", True, COLOR_DIM)
+        self.screen.blit(prompt, prompt.get_rect(center=(panel.centerx, panel.centery + 36)))
 
 
 def main():
