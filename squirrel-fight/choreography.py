@@ -50,10 +50,10 @@ class HpTween:
 
 @dataclass(frozen=True)
 class Timeline:
-    cues: list = field(default_factory=list)
-    captions: list = field(default_factory=list)     # (start_ms, text)
-    hp_tweens: list = field(default_factory=list)
-    hp_start: dict = field(default_factory=dict)
+    cues: list[Cue] = field(default_factory=list)
+    captions: list[tuple[int, str]] = field(default_factory=list)   # sorted by start_ms
+    hp_tweens: list[HpTween] = field(default_factory=list)
+    hp_start: dict[str, int] = field(default_factory=dict)
     total_ms: int = 0
 
 
@@ -61,8 +61,8 @@ class Timeline:
 class FrameState:
     """Everything the renderer needs for one frame, from one `sample()` call."""
 
-    actors: dict
-    hp: dict
+    actors: dict[str, ActorState]
+    hp: dict[str, int]
     caption: str
 
 
@@ -90,6 +90,7 @@ def sample(timeline: Timeline, t_ms: int) -> FrameState:
             progress = (t_ms - tween.start_ms) / tween.duration_ms
             hp[tween.actor] = round(tween.hp_from + (tween.hp_to - tween.hp_from) * progress)
 
+    # Relies on captions being sorted by start_ms: the last one that has started wins.
     caption = ""
     for start_ms, text in timeline.captions:
         if t_ms >= start_ms:
