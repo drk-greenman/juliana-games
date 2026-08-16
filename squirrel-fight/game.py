@@ -53,16 +53,19 @@ def print_header(player: Fighter, computer: Fighter) -> None:
     print(f"  🐿️  SQUIRREL FIGHT — {player.name} vs. {computer.name}")
 
 
-def print_menu() -> None:
-    print("  Attacks:")
+def print_move_details() -> None:
+    color = MOVE_KIND_COLOR["attack"]
+    print(f"  {color}Attacks:{COLOR_RESET}")
     for i, move in enumerate(MOVES[:7], start=1):
-        print(f"    {i}) {move.name} - {move.description}")
-    print("  Defenses:")
+        print(f"  {color}  {i}) {move.name} - {move.description}{COLOR_RESET}")
+    color = MOVE_KIND_COLOR["defense"]
+    print(f"  {color}Defenses:{COLOR_RESET}")
     for i, move in enumerate(MOVES[7:11], start=8):
-        print(f"    {i}) {move.name} - {move.description}")
-    print("  Heal:")
+        print(f"  {color}  {i}) {move.name} - {move.description}{COLOR_RESET}")
+    color = MOVE_KIND_COLOR["heal"]
+    print(f"  {color}Heal:{COLOR_RESET}")
     for i, move in enumerate(MOVES[11:], start=12):
-        print(f"    {i}) {move.name} - {move.description}")
+        print(f"  {color}  {i}) {move.name} - {move.description}{COLOR_RESET}")
 
 
 def prompt_move(fighter_name: str):
