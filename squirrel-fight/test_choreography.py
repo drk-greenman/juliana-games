@@ -81,3 +81,26 @@ def test_effects_mirror_for_the_rival(effect):
     assert (player.offset_x, player.rotation) != (0.0, 0.0)
     assert rival.offset_x == -player.offset_x
     assert rival.rotation == -player.rotation
+
+
+# Which way each effect should carry the player squirrel, which faces right (+1).
+# Screen coordinates: negative offset_y is up. Sampled at a progress where the
+# movement is unambiguous -- stagger wobbles, so it is checked early in its
+# window while the knock-back still dominates.
+DIRECTIONS = [
+    # effect,   progress, elapsed_ms, attribute,   expected sign
+    ("lunge",   0.5, 350, "offset_x", +1),   # drives forward at the rival
+    ("stagger", 0.1,  34, "offset_x", -1),   # reels backwards from the hit
+    ("hop",     0.5, 160, "offset_x", -1),   # skips back out of the way
+    ("hop",     0.5, 160, "offset_y", -1),   # ...and up off the ground
+    ("brace",   0.5, 200, "offset_x", -1),   # digs in and gives ground
+    ("faint",   0.5, 250, "rotation", +1),   # topples over forwards
+    ("faint",   0.5, 250, "offset_y", +1),   # and sinks toward the floor
+    ("glow",    0.5, 210, "offset_y", -1),   # floats up while healing
+]
+
+
+@pytest.mark.parametrize("effect,progress,elapsed_ms,attribute,sign", DIRECTIONS)
+def test_effects_move_the_player_the_right_way(effect, progress, elapsed_ms, attribute, sign):
+    value = getattr(_effect_state(effect, progress, elapsed_ms, 1), attribute)
+    assert value * sign > 0
