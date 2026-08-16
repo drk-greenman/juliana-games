@@ -40,14 +40,15 @@ def clear_cache() -> None:
     _cache.clear()
 
 
-def _load_file(actor: str, pose: str):
+def _load_file(actor: str, pose: str) -> pygame.Surface | None:
     path = ASSETS_DIR / "{}_{}.png".format(actor, pose)
     if not path.is_file():
         return None
     try:
         image = pygame.image.load(str(path)).convert_alpha()
-    except pygame.error:
-        # Corrupt or unreadable file. Treat it exactly like a missing one.
+    except (pygame.error, OSError):
+        # Corrupt, unreadable, or vanished between the check and the load.
+        # Treat it exactly like a missing file.
         return None
     return pygame.transform.smoothscale(image, SPRITE_SIZE)
 
