@@ -17,6 +17,20 @@ ACTORS = (PLAYER, RIVAL)
 # +1 faces right, -1 faces left. Used to mirror every effect for the rival.
 FACING = {PLAYER: 1, RIVAL: -1}
 
+# All timings in milliseconds.
+ACTION_MS = 700      # how long one fighter's action window lasts
+GAP_MS = 120         # pause between the two fighters' windows
+IMPACT_MS = 260      # when a lunge connects, measured from its window start
+DODGE_MS = 180       # when a dodger starts moving, measured from the window start
+STAGGER_MS = 340
+FLASH_MS = 220
+HOP_MS = 320
+BRACE_MS = 400
+GLOW_MS = 420
+HP_MS = 340          # how long an HP bar takes to slide to its new value
+FAINT_MS = 500       # how long the topple takes (the cue itself lasts longer)
+TAIL_MS = 400        # dead air after the last cue so the last line can be read
+
 
 @dataclass(frozen=True)
 class ActorState:
@@ -112,5 +126,44 @@ def _compose(base: ActorState, extra: ActorState) -> ActorState:
     )
 
 
+def _arc(progress: float) -> float:
+    """0 -> 1 -> 0, smoothly. Zero at both ends, so cues start and finish home."""
+    return math.sin(math.pi * progress)
+
+
+def _shudder(progress: float) -> float:
+    """A quick wobble that dies away. Zero at progress 0."""
+    return math.sin(progress * math.pi * 3.0) * (1.0 - progress)
+
+
 def _effect_state(effect: str, progress: float, elapsed_ms: int, facing: int) -> ActorState:
+    if effect == "lunge":
+        swing = _arc(progress)
+        return ActorState(offset_x=facing * 70.0 * swing, rotation=-facing * 12.0 * swing)
+    if effect == "stagger":
+        knock = _shudder(progress)
+        return ActorState(offset_x=-facing * 26.0 * knock, rotation=facing * 9.0 * knock)
+    if effect == "flash":
+        # Instant on impact, then fades. This is the one effect that is loudest
+        # at progress 0 rather than silent.
+        return ActorState(tint=1.0 - progress)
+    if effect == "hop":
+        swing = _arc(progress)
+        return ActorState(offset_x=-facing * 34.0 * swing, offset_y=-52.0 * swing)
+    if effect == "brace":
+        crouch = _arc(progress)
+        return ActorState(offset_x=-facing * 12.0 * crouch, scale=1.0 - 0.09 * crouch)
+    if effect == "glow":
+        lift = _arc(progress)
+        return ActorState(glow=lift, offset_y=-10.0 * lift)
+    if effect == "faint":
+        # Driven by absolute elapsed time, not progress: the cue is stretched to
+        # the end of the timeline so the squirrel stays down, but the topple
+        # itself always takes FAINT_MS.
+        fallen = min(1.0, elapsed_ms / FAINT_MS)
+        return ActorState(
+            rotation=facing * 90.0 * fallen,
+            offset_y=26.0 * fallen,
+            alpha=1.0 - 0.45 * fallen,
+        )
     return ActorState()
