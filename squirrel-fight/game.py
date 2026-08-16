@@ -139,26 +139,41 @@ def play_battle() -> None:
     player = Fighter(name=name, hp=60, max_hp=60)
     computer = Fighter(name=random.choice(RIVAL_NAMES), hp=60, max_hp=60)
 
-    print(f"\n  {player.name} vs. {computer.name}! Let the fight begin!\n")
-    print_status(player, computer)
+    recap_lines = [f"  {player.name} vs. {computer.name}! Let the fight begin!"]
 
     while True:
-        print_menu()
+        # Beat 1: recap of the last turn (or the intro line, on turn 1)
+        clear_screen()
+        print_header(player, computer)
+        print_status(player, computer)
+        for line in recap_lines:
+            print(line)
+        print()
+
+        outcome = battle_outcome(player, computer)
+        if outcome != "ongoing":
+            if outcome == "draw":
+                print("  Both squirrels are down! It's a draw!\n")
+            elif outcome == "a_wins":
+                print(f"  {player.name} wins!\n")
+            elif outcome == "b_wins":
+                print(f"  {computer.name} wins!\n")
+            break
+
+        input("  Press Enter to continue...")
+
+        # Beat 2: the move menu
+        clear_screen()
+        print_header(player, computer)
+        print_status(player, computer)
+        print("  " + "-" * 45)
+        print_menu_compact()
+        print()
+
         player_move = prompt_move(player.name)
         computer_move = computer_choose_move()
         result = resolve_turn(player, player_move, computer, computer_move)
-        print_turn_result(player, computer, player_move, computer_move, result)
-
-        outcome = battle_outcome(player, computer)
-        if outcome == "draw":
-            print("  Both squirrels are down! It's a draw!\n")
-            break
-        if outcome == "a_wins":
-            print(f"  {player.name} wins!\n")
-            break
-        if outcome == "b_wins":
-            print(f"  {computer.name} wins!\n")
-            break
+        recap_lines = format_turn_result_lines(player, computer, player_move, computer_move, result)
 
 
 def main() -> None:
