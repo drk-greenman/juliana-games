@@ -1,3 +1,4 @@
+import os
 import random
 
 from battle import Fighter, resolve_turn, battle_outcome
@@ -23,6 +24,17 @@ BANNER = r"""
 """
 
 HP_BAR_WIDTH = 20
+
+COLOR_RESET = "\033[0m"
+MOVE_KIND_COLOR = {
+    "attack": "\033[91m",
+    "defense": "\033[96m",
+    "heal": "\033[92m",
+}
+
+
+def clear_screen() -> None:
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 def hp_bar(fighter: Fighter) -> str:
