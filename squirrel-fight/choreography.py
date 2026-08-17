@@ -148,8 +148,11 @@ def _effect_state(effect: str, progress: float, elapsed_ms: int, facing: int) ->
         # at progress 0 rather than silent.
         return ActorState(tint=1.0 - progress)
     if effect == "hop":
+        # The lift is capped by the headroom between a standing squirrel's ears
+        # and the top of the stage. Raise it and the dodger jumps up over the HP
+        # bars; `visual_game` clips the stage, so it would be sliced flat instead.
         swing = _arc(progress)
-        return ActorState(offset_x=-facing * 34.0 * swing, offset_y=-52.0 * swing)
+        return ActorState(offset_x=-facing * 34.0 * swing, offset_y=-30.0 * swing)
     if effect == "brace":
         crouch = _arc(progress)
         return ActorState(offset_x=-facing * 12.0 * crouch, scale=1.0 - 0.09 * crouch)
@@ -163,7 +166,10 @@ def _effect_state(effect: str, progress: float, elapsed_ms: int, facing: int) ->
         fallen = min(1.0, elapsed_ms / FAINT_MS)
         return ActorState(
             rotation=facing * 90.0 * fallen,
-            offset_y=26.0 * fallen,
+            # Just enough of a slump to read as hitting the dirt. Any more and
+            # the fallen squirrel's head sinks through the grass into the
+            # message strip, since it is already standing on the stage floor.
+            offset_y=6.0 * fallen,
             alpha=1.0 - 0.45 * fallen,
         )
     return ActorState()

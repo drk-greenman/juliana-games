@@ -275,8 +275,14 @@ class Game:
     def _draw_stage(self):
         pygame.draw.rect(self.screen, COLOR_SKY, (0, STAGE_TOP, WINDOW_SIZE[0], GROUND_Y - STAGE_TOP))
         pygame.draw.rect(self.screen, COLOR_GRASS, (0, GROUND_Y, WINDOW_SIZE[0], STAGE_BOTTOM - GROUND_Y))
+        # Squirrels are drawn after the HP panel, so a big enough hop or a wide
+        # rotation would otherwise paint over the HP bars. The effects are tuned
+        # to stay inside the stage; this makes that a guarantee rather than a
+        # thing to remember every time an effect is added.
+        self.screen.set_clip(pygame.Rect(0, STAGE_TOP, WINDOW_SIZE[0], STAGE_BOTTOM - STAGE_TOP))
         self._draw_squirrel(PLAYER, PLAYER_X)
         self._draw_squirrel(RIVAL, RIVAL_X)
+        self.screen.set_clip(None)
 
     def _draw_squirrel(self, actor, center_x):
         state = self.frame.actors[actor] if self.frame is not None else ActorState()
