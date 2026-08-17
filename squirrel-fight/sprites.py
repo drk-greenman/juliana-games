@@ -6,6 +6,9 @@ import pygame
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 SPRITE_SIZE = (200, 200)
+# Matches visual_game's stage band, the strip between the HP panel and the
+# message strip. A drawn backdrop is stretched to exactly fill it.
+STAGE_SIZE = (960, 240)
 
 # Body colours for the code-drawn stand-in squirrels, so the two fighters are
 # still tellable apart before any real art exists.
@@ -15,6 +18,7 @@ PLACEHOLDER_COLORS = {
 }
 
 _cache: dict = {}
+_background_cache: dict = {}
 
 
 def load_pose(actor: str, pose: str) -> pygame.Surface:
@@ -38,6 +42,7 @@ def load_pose(actor: str, pose: str) -> pygame.Surface:
 def clear_cache() -> None:
     """Forget every loaded drawing. Only needed if assets change while running."""
     _cache.clear()
+    _background_cache.clear()
 
 
 def _load_file(actor: str, pose: str) -> pygame.Surface | None:
@@ -51,6 +56,28 @@ def _load_file(actor: str, pose: str) -> pygame.Surface | None:
         # Treat it exactly like a missing file.
         return None
     return pygame.transform.smoothscale(image, SPRITE_SIZE)
+
+
+def load_background() -> pygame.Surface | None:
+    """Return `assets/background.png` scaled to the stage, or None if there isn't one.
+
+    None means "no backdrop drawn yet", which the caller answers with its plain
+    sky and grass — so this is the one loader with no placeholder of its own.
+    """
+    if "background" not in _background_cache:
+        path = ASSETS_DIR / "background.png"
+        surface = None
+        if path.is_file():
+            try:
+                # convert(), not convert_alpha(): a backdrop fills the whole
+                # stage, so it needs no transparency and blits faster opaque.
+                surface = pygame.transform.smoothscale(
+                    pygame.image.load(str(path)).convert(), STAGE_SIZE
+                )
+            except (pygame.error, OSError):
+                surface = None
+        _background_cache["background"] = surface
+    return _background_cache["background"]
 
 
 def _draw_placeholder(actor: str) -> pygame.Surface:

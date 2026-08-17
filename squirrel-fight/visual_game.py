@@ -24,7 +24,7 @@ from battle import Fighter, battle_outcome, resolve_turn
 from choreography import PLAYER, RIVAL, ActorState, build_timeline, sample
 from game import RIVAL_NAMES
 from moves import MOVES
-from sprites import load_pose
+from sprites import load_background, load_pose
 
 WINDOW_SIZE = (960, 640)
 FPS = 60
@@ -273,8 +273,14 @@ class Game:
             pygame.draw.rect(self.screen, color, fill, border_radius=8)
 
     def _draw_stage(self):
-        pygame.draw.rect(self.screen, COLOR_SKY, (0, STAGE_TOP, WINDOW_SIZE[0], GROUND_Y - STAGE_TOP))
-        pygame.draw.rect(self.screen, COLOR_GRASS, (0, GROUND_Y, WINDOW_SIZE[0], STAGE_BOTTOM - GROUND_Y))
+        background = load_background()
+        if background is None:
+            pygame.draw.rect(self.screen, COLOR_SKY,
+                             (0, STAGE_TOP, WINDOW_SIZE[0], GROUND_Y - STAGE_TOP))
+            pygame.draw.rect(self.screen, COLOR_GRASS,
+                             (0, GROUND_Y, WINDOW_SIZE[0], STAGE_BOTTOM - GROUND_Y))
+        else:
+            self.screen.blit(background, (0, STAGE_TOP))
         # Squirrels are drawn after the HP panel, so a big enough hop or a wide
         # rotation would otherwise paint over the HP bars. The effects are tuned
         # to stay inside the stage; this makes that a guarantee rather than a
@@ -284,9 +290,29 @@ class Game:
         self._draw_squirrel(RIVAL, RIVAL_X)
         self.screen.set_clip(None)
 
+    def _pose_for(self, actor):
+        """Pick a drawing by what the squirrel is currently doing.
+
+        `sprites.load_pose` falls back to `idle` for any pose that has no PNG,
+        so this is safe whether or not the extra drawings have been made yet.
+        """
+        if self.state not in ("animating", "result") or self.timeline is None:
+            return "idle"
+        active = {
+            cue.effect
+            for cue in self.timeline.cues
+            if cue.actor == actor
+            and cue.start_ms <= self.elapsed_ms <= cue.start_ms + cue.duration_ms
+        }
+        if "stagger" in active or "faint" in active:
+            return "hurt"
+        if "lunge" in active:
+            return "attack"
+        return "idle"
+
     def _draw_squirrel(self, actor, center_x):
         state = self.frame.actors[actor] if self.frame is not None else ActorState()
-        image = load_pose(actor, "idle")
+        image = load_pose(actor, self._pose_for(actor))
         if actor == RIVAL:
             image = pygame.transform.flip(image, True, False)
         if state.scale != 1.0:
