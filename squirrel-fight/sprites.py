@@ -14,15 +14,16 @@ import pygame
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 
-# Juliana's squirrels are 32x32 pixel art, so they are blown up by a whole
-# number and with nearest-neighbour sampling. Anything else turns hard pixel
-# edges into blur. One shared factor keeps a pixel the same size on screen for
-# every squirrel, so a smaller drawing reads as a smaller squirrel rather than
-# as the same squirrel at a different resolution.
+# Drawings arrive in two styles and `_fit` tells them apart by height. Anything
+# this short was drawn pixel by pixel, and gets blown up by a whole number with
+# nearest-neighbour sampling. One shared factor keeps a pixel the same size on
+# screen for every squirrel, so a smaller drawing reads as a smaller squirrel
+# rather than as the same squirrel at a different resolution.
 PIXEL_SCALE = 8
 PIXEL_ART_MAX_HEIGHT = 48
-# Big, smooth drawings are fitted to this instead, so a photo-sized PNG doesn't
-# arrive eight times taller than the window.
+# Anything taller was drawn freehand, and is fitted to this height instead — so
+# a 1000px drawing doesn't turn up eight times taller than the window, and the
+# two styles end up roughly the same size as each other on the stage.
 TARGET_HEIGHT = 180
 
 # The stage band in visual_game, between the HP panel and the message strip.
@@ -177,17 +178,25 @@ def _trim(image: pygame.Surface) -> pygame.Surface:
 
 
 def _fit(image: pygame.Surface) -> pygame.Surface:
-    """Blow the drawing up to fighting size, without ever blurring it."""
+    """Blow the drawing up to fighting size, in whichever way suits how it was drawn.
+
+    The two styles need opposite treatment, and the source height tells them
+    apart: a tiny drawing was drawn pixel by pixel, a big one was drawn freehand.
+    Using the wrong one is very visible — smoothscale turns pixel art to mush,
+    and nearest-neighbour turns a soft-edged drawing to jaggies.
+    """
     height = image.get_height()
     if height == 0:
         return image
     if height <= PIXEL_ART_MAX_HEIGHT:
-        factor = PIXEL_SCALE
-    else:
-        factor = TARGET_HEIGHT / height
+        # Pixel art: a whole-number blow-up with nearest-neighbour sampling, so
+        # every pixel stays square, sharp, and the same size as its neighbours'.
+        size = (max(1, image.get_width() * PIXEL_SCALE), max(1, height * PIXEL_SCALE))
+        return pygame.transform.scale(image, size)
+    # A freehand drawing: fit it to a fighter's height and keep its soft edges.
+    factor = TARGET_HEIGHT / height
     size = (max(1, round(image.get_width() * factor)), max(1, round(height * factor)))
-    # scale(), never smoothscale(): nearest-neighbour keeps pixel art crisp.
-    return pygame.transform.scale(image, size)
+    return pygame.transform.smoothscale(image, size)
 
 
 def _draw_placeholder(side: str) -> pygame.Surface:

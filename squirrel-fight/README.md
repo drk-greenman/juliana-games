@@ -44,9 +44,16 @@ with dashes instead of spaces. The name has to match one in `RIVAL_NAMES` in
 | `BIG BUMBOY` | `assets/big-bumboy.png` |
 | `sherlock gnomes` | `assets/sherlock-gnomes.png` |
 
-Draw them **facing left**, on a see-through background. 32×32 pixel art works
-beautifully — it gets blown up 8× with the pixels kept sharp and square. Bigger,
-smoother drawings are fine too; they get sized down to fit instead.
+Draw them **facing left**, on a see-through background. Both styles work, and
+each is handled the way it wants to be:
+
+- **Small pixel art** (32×32 and up to 48 tall) is blown up 8×, keeping every
+  pixel sharp and square.
+- **Bigger freehand drawings** are resized to stand about as tall as everyone
+  else, keeping their soft edges.
+
+So a pixel squirrel and a hand-drawn one end up roughly the same size on the
+stage and can fight each other quite happily.
 
 The player's squirrel borrows one of the rivals' drawings each battle, picking
 one that isn't in the fight, so you never face your own twin.
