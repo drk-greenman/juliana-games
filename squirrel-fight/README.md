@@ -30,29 +30,38 @@ Neither version needs an API key. Both are fully offline.
 
 ## Drawing your own squirrels
 
-The window version draws simple placeholder squirrels until you give it real
-art. Drop PNG files into `squirrel-fight/assets/` and they show up next run —
-no code changes needed.
+Drop PNG files into `squirrel-fight/assets/` and they show up next run — no code
+changes needed. Any squirrel you haven't drawn yet uses a simple code-drawn
+placeholder, so the game always works and just gets better one drawing at a time.
 
-Start with these two:
+**Give each rival its own drawing** by naming the file after them, in lowercase
+with dashes instead of spaces. The name has to match one in `RIVAL_NAMES` in
+`game.py`, or that squirrel will never turn up to fight:
 
-- `assets/player_idle.png`
-- `assets/rival_idle.png`
+| Rival in `game.py` | Draw this file |
+| --- | --- |
+| `JOHN CENA` | `assets/john-cena.png` |
+| `BIG BUMBOY` | `assets/big-bumboy.png` |
+| `sherlock gnomes` | `assets/sherlock-gnomes.png` |
 
-Make them PNGs with a see-through background, roughly 200×200, with the
-squirrel **facing right**. The rival gets flipped automatically, so both
-drawings face the same way.
+Draw them **facing left**, on a see-through background. 32×32 pixel art works
+beautifully — it gets blown up 8× with the pixels kept sharp and square. Bigger,
+smoother drawings are fine too; they get sized down to fit instead.
 
-Once those work, these are all optional and each one replaces a placeholder:
+The player's squirrel borrows one of the rivals' drawings each battle, picking
+one that isn't in the fight, so you never face your own twin.
+
+These are all optional, and each one replaces a placeholder:
 
 | File | When it shows |
 | --- | --- |
-| `player_hurt.png`, `rival_hurt.png` | While getting hit |
-| `player_attack.png`, `rival_attack.png` | While lunging |
-| `background.png` | Instead of the plain sky and grass |
+| `john-cena_hurt.png` | While that squirrel is getting hit |
+| `john-cena_attack.png` | While that squirrel is lunging |
+| `player_idle.png`, `rival_idle.png` | Any squirrel with no drawing of its own |
+| `background.png` | The arena, behind the fight |
 
-Any file you haven't drawn yet just falls back to the one you have, so you can
-add them one at a time.
+The background is drawn as a frame over the sky and grass, so anything you leave
+**pure white** in it becomes see-through and the sky shows through the gap.
 
 ## Run the tests
 
@@ -60,9 +69,10 @@ add them one at a time.
 python3 -m pytest squirrel-fight/
 ```
 
-`test_battle.py` covers the fight maths and `test_choreography.py` covers the
-animation timeline. The pygame drawing code has no tests — like `game.py`, it's
-checked by playing it.
+`test_battle.py` covers the fight maths, `test_choreography.py` covers the
+animation timeline, and `test_sprites.py` covers turning a rival's name into a
+filename. The pygame drawing code has no tests — like `game.py`, it's checked by
+playing it.
 
 ## How the code is split
 

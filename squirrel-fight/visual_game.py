@@ -24,7 +24,7 @@ from battle import Fighter, battle_outcome, resolve_turn
 from choreography import PLAYER, RIVAL, ActorState, build_timeline, sample
 from game import RIVAL_NAMES
 from moves import MOVES
-from sprites import load_background, load_pose
+from sprites import available_squirrels, load_background, load_pose, slug
 
 WINDOW_SIZE = (960, 640)
 FPS = 60
@@ -76,6 +76,18 @@ if len(MOVES) != len(SHORTCUT_KEYS) or len(MOVES) != _BUTTON_SLOTS:
     )
 
 
+def pick_player_art(rival_name):
+    """Borrow a drawing for the player, avoiding the one the rival is using.
+
+    Every drawing so far is a named rival, and the player's squirrel is whoever
+    Juliana says it is — so the player borrows a face rather than going without
+    one. Returns None when there is nothing to borrow, which lands the player
+    back on the code-drawn placeholder.
+    """
+    others = sorted(available_squirrels() - {slug(rival_name)})
+    return random.choice(others) if others else None
+
+
 class Button:
     def __init__(self, rect, move, number):
         self.rect = rect
@@ -108,6 +120,7 @@ class Game:
         self.typed_name = ""
         self.player = None
         self.rival = None
+        self.art_names = {PLAYER: None, RIVAL: None}
         self.message = ""
         self.timeline = None
         self.frame = None
@@ -121,6 +134,9 @@ class Game:
         name = self.typed_name.strip() or "You"
         self.player = Fighter(name=name, hp=START_HP, max_hp=START_HP)
         self.rival = Fighter(name=random.choice(RIVAL_NAMES), hp=START_HP, max_hp=START_HP)
+        # The rival is drawn as itself where a drawing exists; the player has no
+        # drawing of their own, so they borrow one of the others.
+        self.art_names = {PLAYER: pick_player_art(self.rival.name), RIVAL: self.rival.name}
         self.message = "{} vs. {}! Let the fight begin!".format(self.player.name, self.rival.name)
         self.timeline = None
         self.frame = None
@@ -273,13 +289,15 @@ class Game:
             pygame.draw.rect(self.screen, color, fill, border_radius=8)
 
     def _draw_stage(self):
+        # The arena drawing is a frame — trunks down the sides, leaves above,
+        # dirt below — with a see-through middle, so the sky and grass are laid
+        # down first and show through it rather than being replaced by it.
+        pygame.draw.rect(self.screen, COLOR_SKY,
+                         (0, STAGE_TOP, WINDOW_SIZE[0], GROUND_Y - STAGE_TOP))
+        pygame.draw.rect(self.screen, COLOR_GRASS,
+                         (0, GROUND_Y, WINDOW_SIZE[0], STAGE_BOTTOM - GROUND_Y))
         background = load_background()
-        if background is None:
-            pygame.draw.rect(self.screen, COLOR_SKY,
-                             (0, STAGE_TOP, WINDOW_SIZE[0], GROUND_Y - STAGE_TOP))
-            pygame.draw.rect(self.screen, COLOR_GRASS,
-                             (0, GROUND_Y, WINDOW_SIZE[0], STAGE_BOTTOM - GROUND_Y))
-        else:
+        if background is not None:
             self.screen.blit(background, (0, STAGE_TOP))
         # Squirrels are drawn after the HP panel, so a big enough hop or a wide
         # rotation would otherwise paint over the HP bars. The effects are tuned
@@ -312,7 +330,7 @@ class Game:
 
     def _draw_squirrel(self, actor, center_x):
         state = self.frame.actors[actor] if self.frame is not None else ActorState()
-        image = load_pose(actor, self._pose_for(actor))
+        image = load_pose(actor, self._pose_for(actor), self.art_names.get(actor))
         if actor == RIVAL:
             image = pygame.transform.flip(image, True, False)
         if state.scale != 1.0:
