@@ -156,3 +156,25 @@ def test_the_player_cannot_outrun_the_leash():
 def test_neither_squirrel_can_be_pushed_out_of_the_world():
     assert arena.clamp_player(9999, arena.WALK_RIGHT) <= arena.WALK_RIGHT - arena.MIN_GAP
     assert arena.clamp_rival(-9999, arena.WALK_LEFT) >= arena.WALK_LEFT + arena.MIN_GAP
+
+
+def test_camera_centres_between_the_two_squirrels():
+    # Well inside the world, so no clamping interferes.
+    assert arena.camera_x(1200, 1600) == 1400 - arena.WINDOW_WIDTH / 2
+
+
+def test_camera_stops_at_the_left_of_the_world():
+    assert arena.camera_x(arena.WALK_LEFT, arena.WALK_LEFT + arena.MIN_GAP) == 0
+
+
+def test_camera_stops_at_the_right_of_the_world():
+    assert arena.camera_x(arena.WALK_RIGHT - arena.MIN_GAP, arena.WALK_RIGHT) == (
+        arena.WORLD_WIDTH - arena.WINDOW_WIDTH
+    )
+
+
+def test_opening_positions_look_exactly_like_the_old_one_screen_stage():
+    """The game should open on the marks the squirrels always stood on."""
+    camera = arena.camera_x(arena.PLAYER_START, arena.RIVAL_START)
+    assert arena.PLAYER_START - camera == 250
+    assert arena.RIVAL_START - camera == 710

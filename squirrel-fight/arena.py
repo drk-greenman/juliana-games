@@ -72,6 +72,17 @@ def band(player_x, rival_x) -> str:
     return FAR
 
 
+def camera_x(player_x, rival_x) -> float:
+    """The left edge of the view: centred between the fighters, inside the world.
+
+    Deliberately stateless — recomputed every frame rather than stored and eased.
+    The squirrels already move smoothly, so the camera does too, and there is no
+    scroll position that can drift out of step with where they actually are.
+    """
+    middle = (player_x + rival_x) / 2.0
+    return max(0.0, min(WORLD_WIDTH - WINDOW_WIDTH, middle - WINDOW_WIDTH / 2.0))
+
+
 def reaches(move, player_x, rival_x) -> bool:
     """Would `move` connect from where these two are standing?"""
     if move.reach == "any":
