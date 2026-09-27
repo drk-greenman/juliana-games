@@ -38,3 +38,20 @@ def test_slugging_a_slug_changes_nothing():
 
 def test_leading_and_trailing_junk_is_stripped():
     assert slug("  SIR NUTS ALOT!  ") == "sir-nuts-alot"
+
+
+def test_a_tree_is_always_available_even_with_no_drawing():
+    """Like the squirrels, trees work with no art and get better with it."""
+    import os
+
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    import pygame
+
+    import sprites
+
+    pygame.init()
+    pygame.display.set_mode((1, 1))
+    sprites.clear_cache()
+    tree = sprites.load_tree()
+    assert tree.get_width() > 0
+    assert tree.get_height() > 0

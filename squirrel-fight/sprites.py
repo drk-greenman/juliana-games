@@ -143,6 +143,47 @@ def load_background() -> pygame.Surface | None:
     return _background_cache["background"]
 
 
+# How big a trunk is drawn on the stage: wide enough to read as a tree, tall
+# enough to reach above the highest a squirrel can climb.
+TREE_SIZE = (60, 300)
+
+# Bark colours for the code-drawn stand-in trunk.
+TREE_COLORS = ((104, 72, 44), (78, 52, 30))
+
+
+def load_tree() -> pygame.Surface:
+    """Return `assets/tree.png` at trunk size, or a code-drawn one.
+
+    Same bargain as the squirrels: the game works with no art at all, and gets
+    better the moment somebody draws a tree.
+    """
+    if "tree" not in _cache:
+        surface = None
+        path = ASSETS_DIR / "tree.png"
+        if path.is_file():
+            try:
+                surface = pygame.transform.scale(
+                    pygame.image.load(str(path)).convert_alpha(), TREE_SIZE
+                )
+            except (pygame.error, OSError):
+                surface = None
+        _cache["tree"] = surface if surface is not None else _draw_tree()
+    return _cache["tree"]
+
+
+def _draw_tree() -> pygame.Surface:
+    """A plain trunk with a bit of bark texture, so trees read as climbable."""
+    width, height = TREE_SIZE
+    surface = pygame.Surface(TREE_SIZE, pygame.SRCALPHA)
+    bark, dark = TREE_COLORS
+    surface.fill(bark)
+    # A few vertical grooves. Regular rather than random so it doesn't shimmer
+    # between frames.
+    for x in range(6, width, 17):
+        pygame.draw.rect(surface, dark, (x, 0, 4, height))
+    return surface
+
+
 def clear_cache() -> None:
     """Forget every loaded drawing. Only needed if assets change while running."""
     _cache.clear()
