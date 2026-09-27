@@ -29,4 +29,11 @@ Within a project folder, expect a standalone script style (no shared framework/e
 
 - `word-combo-story/game.py`: picks a random adjective + noun combo, prompts the player to describe what it is, then streams a short kid-friendly story from Claude (`claude-haiku-4-5-20251001` via the `anthropic` SDK's `messages.stream`) back to the terminal. The word lists (`ADJECTIVES`, `NOUNS`) are the main tunable content — edits there are the most common kind of change requested for this game.
 
-- `squirrel-fight/`: a console 1v1 squirrel dueling game, fully offline (no Claude API use). Split across three files rather than one script: `moves.py` holds the 12 attack/defense/heal moves as data, `battle.py` is pure turn-resolution logic with no I/O (and the only tested code in this project — see `test_battle.py`), and `game.py` is the CLI loop (banner, menus, input handling) that ties them together. The move numbers/effects and full turn-resolution rules are documented in `docs/superpowers/specs/2026-08-14-squirrel-fight-design.md`.
+- `squirrel-fight/`: a 1v1 squirrel dueling game, fully offline (no Claude API use), playable two ways from one rules engine — `game.py` is the terminal version and `visual_game.py` a pygame window. The split is by purity, and it is the thing to preserve when changing this project:
+  - **Pure, no pygame, fully tested**: `moves.py` (the 12 moves as data), `battle.py` (turn resolution), `choreography.py` (a resolved turn as timed animation cues), `arena.py` (where squirrels are, how far apart, the rival's wandering).
+  - **I/O at the edges**: `game.py`, `visual_game.py`, `sprites.py` (loading drawings).
+  - `visual_game.py` has only smoke tests (`test_visual_game.py`) — they drive a real `Game` through its states to catch renames and signature breaks, because the pure tests cannot see a game that no longer launches.
+
+  Distance is the main cross-cutting rule: `arena.band()` returns `"close"`/`"mid"`/`"far"` and `battle.resolve_turn(..., band=)` whiffs moves used at the wrong range. `band=None` means "distance isn't in play", which is how the terminal version stays unchanged — **`game.py` has deliberately not been modified by any of the movement work.**
+
+  The tunable numbers (damage ranges in `moves.py`, distances and speeds at the top of `arena.py`) are the most common kind of change requested. Designs live in `docs/superpowers/specs/`.
