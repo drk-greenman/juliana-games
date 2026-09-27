@@ -85,6 +85,27 @@ These are all optional, and each one replaces a placeholder:
 | `john-cena_attack.png` | While that squirrel is lunging |
 | `player_idle.png`, `rival_idle.png` | Any squirrel with no drawing of its own |
 
+## Drawing your own terrain
+
+The arena is one file, `assets/background.png`, and it shows up next run — same as the
+squirrels. Start from `source-art/background-template.png`, which is already the right
+shape and has the ground marked.
+
+Three things that catch people out:
+
+- **Paint see-through bits pure white** (`#FFFFFF`), *not* transparent. Backgrounds are
+  loaded without an alpha channel, so genuinely transparent pixels come out **black**.
+  White drops out and lets the game's own sky and grass show through. (Squirrel drawings
+  are the opposite — those do want real transparency.)
+- **Draw it 4:1.** It gets stretched to 960×240, so a 4:1 image keeps its pixels square.
+  The template is 240×60. The older `background.png` is 64×36, which is why its blocks
+  look wide and squashed.
+- **The ground is near the bottom.** In the 240×60 template the ground line is row 56 and
+  the squirrels' feet land on row 58 — marked with a dotted line. Paint over the dots;
+  they're only a guide.
+
+Any size works — it's scaled with nearest-neighbour, so pixel art stays sharp.
+
 ## The borrowed squirrels
 
 Seven rivals — Nutsy McGee, Mr. tickle bum, Chompy Von Nutsalot, lord o Grey
