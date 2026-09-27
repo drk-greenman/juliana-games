@@ -19,6 +19,7 @@ class FighterTurnOutcome:
     damage_dealt: int = 0
     healed: int = 0
     dodged: bool = False
+    whiffed: bool = False
 
 
 @dataclass
@@ -61,7 +62,25 @@ def _capped_heal(raw_heal: int, hp_before: int, damage_taken: int, max_hp: int) 
     return max(0, min(raw_heal, room))
 
 
-def resolve_turn(fighter_a: Fighter, move_a: Move, fighter_b: Fighter, move_b: Move) -> TurnResult:
+def _reaches(move: Move, close: bool | None) -> bool:
+    """Can this move connect from here?
+
+    `close` is True when the fighters are near each other, False when they are
+    apart, and None when distance isn't part of the game at all — which is how
+    the terminal version in `game.py` keeps playing exactly as it always has.
+    """
+    if close is None or move.reach == "any":
+        return True
+    return close if move.reach == "melee" else not close
+
+
+def resolve_turn(
+    fighter_a: Fighter,
+    move_a: Move,
+    fighter_b: Fighter,
+    move_b: Move,
+    close: bool | None = None,
+) -> TurnResult:
     outcome_a = FighterTurnOutcome(move_name=move_a.name)
     outcome_b = FighterTurnOutcome(move_name=move_b.name)
     flavor_text = None
@@ -70,18 +89,24 @@ def resolve_turn(fighter_a: Fighter, move_a: Move, fighter_b: Fighter, move_b: M
     dmg_b_to_a = 0
 
     if move_a.kind == "attack":
-        raw = _roll_damage(move_a)
-        defending = move_b if move_b.kind == "defense" else None
-        dmg_a_to_b, b_dodged = _mitigate(raw, defending)
-        if defending is not None and defending.dodge_chance is not None:
-            outcome_b.dodged = b_dodged
+        if not _reaches(move_a, close):
+            outcome_a.whiffed = True
+        else:
+            raw = _roll_damage(move_a)
+            defending = move_b if move_b.kind == "defense" else None
+            dmg_a_to_b, b_dodged = _mitigate(raw, defending)
+            if defending is not None and defending.dodge_chance is not None:
+                outcome_b.dodged = b_dodged
 
     if move_b.kind == "attack":
-        raw = _roll_damage(move_b)
-        defending = move_a if move_a.kind == "defense" else None
-        dmg_b_to_a, a_dodged = _mitigate(raw, defending)
-        if defending is not None and defending.dodge_chance is not None:
-            outcome_a.dodged = a_dodged
+        if not _reaches(move_b, close):
+            outcome_b.whiffed = True
+        else:
+            raw = _roll_damage(move_b)
+            defending = move_a if move_a.kind == "defense" else None
+            dmg_b_to_a, a_dodged = _mitigate(raw, defending)
+            if defending is not None and defending.dodge_chance is not None:
+                outcome_a.dodged = a_dodged
 
     if move_a.kind == "attack" and move_a.lifesteal:
         outcome_a.healed += _capped_heal(dmg_a_to_b // 2, fighter_a.hp, dmg_b_to_a, fighter_a.max_hp)
