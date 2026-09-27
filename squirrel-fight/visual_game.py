@@ -20,6 +20,7 @@ except ImportError:
         "    python3 squirrel-fight/game.py\n"
     )
 
+import arena
 from battle import Fighter, battle_outcome, resolve_turn
 from choreography import PLAYER, RIVAL, ActorState, build_timeline, sample
 from game import RIVAL_NAMES
@@ -51,8 +52,6 @@ STAGE_TOP = 92
 GROUND_Y = 316
 STAGE_BOTTOM = 332
 MESSAGE_TOP = 332
-PLAYER_X = 250
-RIVAL_X = 710
 
 # (row top, first move index, last move index exclusive)
 BUTTON_ROWS = ((408, 0, 4), (456, 4, 7), (520, 7, 11), (584, 11, 12))
@@ -127,6 +126,9 @@ class Game:
         self.elapsed_ms = 0
         self.outcome = "ongoing"
         self.hover = None
+        self.player_x = arena.PLAYER_START
+        self.rival_x = arena.RIVAL_START
+        self.wander = arena.Wander()
 
     # ----- state changes -------------------------------------------------
 
@@ -143,6 +145,11 @@ class Game:
         self.elapsed_ms = 0
         self.outcome = "ongoing"
         self.hover = None
+        # Both squirrels go back to their marks, so a rematch doesn't start
+        # wherever the last fight happened to finish.
+        self.player_x = arena.PLAYER_START
+        self.rival_x = arena.RIVAL_START
+        self.wander = arena.Wander()
         self.state = "battle"
 
     # ----- input ---------------------------------------------------------
@@ -304,8 +311,8 @@ class Game:
         # to stay inside the stage; this makes that a guarantee rather than a
         # thing to remember every time an effect is added.
         self.screen.set_clip(pygame.Rect(0, STAGE_TOP, WINDOW_SIZE[0], STAGE_BOTTOM - STAGE_TOP))
-        self._draw_squirrel(PLAYER, PLAYER_X)
-        self._draw_squirrel(RIVAL, RIVAL_X)
+        self._draw_squirrel(PLAYER, self.player_x)
+        self._draw_squirrel(RIVAL, self.rival_x)
         self.screen.set_clip(None)
 
     def _pose_for(self, actor):
