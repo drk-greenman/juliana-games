@@ -58,6 +58,30 @@ RIVAL_SPEED = 90.0
 WANDER_MIN_MS = 400
 WANDER_MAX_MS = 1200
 
+# Trunks at fixed spots across the world. The one at 1440 sits between the two
+# opening positions, so there is a tree on screen from the very first turn.
+TREES = (420, 960, 1440, 1980, 2480)
+
+# How near a trunk you have to be to start climbing it.
+CLIMB_REACH = 60
+
+# How high a squirrel can get. NOT a tuning knob: feet plant at GROUND_Y + 10 =
+# 526, and the tallest drawing is 184px, so at 240 its head is at y=102 against a
+# stage ceiling of 92. Ten pixels of margin. Raise this and ears leave the stage.
+# `test_a_fully_climbed_squirrel_still_fits_on_the_stage` guards it.
+MAX_CLIMB = 240
+
+# Height difference above which two squirrels stop bumping into each other, so
+# one can walk underneath another that is up a tree.
+CLIMB_CLEARANCE = 60
+
+CLIMB_SPEED = 160.0
+RIVAL_CLIMB_SPEED = 70.0
+
+# How long one of the rival's vertical whims lasts.
+CLIMB_MIN_MS = 300
+CLIMB_MAX_MS = 900
+
 
 def gap(player_x, player_y, rival_x, rival_y) -> float:
     """Straight-line distance, so height counts the same as walking does."""
@@ -112,6 +136,19 @@ def clamp_rival(x, player_x) -> float:
 def walk_player(x, direction, dt_ms, rival_x, speed=PLAYER_SPEED) -> float:
     """Step the player `direction` (-1 left, +1 right) for `dt_ms` milliseconds."""
     return clamp_player(x + direction * speed * (dt_ms / 1000.0), rival_x)
+
+
+def tree_near(x):
+    """The trunk close enough to climb from `x`, or None."""
+    for trunk in TREES:
+        if abs(x - trunk) <= CLIMB_REACH:
+            return trunk
+    return None
+
+
+def climb(y, direction, dt_ms, speed=CLIMB_SPEED) -> float:
+    """Move up (+1) or down (-1) a trunk, stopping at the ground and the ceiling."""
+    return max(0.0, min(MAX_CLIMB, y + direction * speed * (dt_ms / 1000.0)))
 
 
 @dataclass(frozen=True)

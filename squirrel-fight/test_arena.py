@@ -194,3 +194,42 @@ def test_height_can_push_you_out_of_melee_range():
     # and it tips into the ranged band.
     assert arena.band(1000, 0, 1000, arena.CLOSE_RANGE) == arena.CLOSE
     assert arena.band(1000, 0, 1000 + 200, 240) == arena.MID
+
+
+def test_trees_stand_inside_the_walkable_world():
+    for trunk in arena.TREES:
+        assert arena.WALK_LEFT <= trunk <= arena.WALK_RIGHT
+
+
+def test_a_tree_is_on_screen_from_the_first_turn():
+    assert any(arena.PLAYER_START <= trunk <= arena.RIVAL_START for trunk in arena.TREES)
+
+
+def test_tree_near_finds_a_trunk_within_reach():
+    trunk = arena.TREES[0]
+    assert arena.tree_near(trunk) == trunk
+    assert arena.tree_near(trunk + arena.CLIMB_REACH) == trunk
+    assert arena.tree_near(trunk + arena.CLIMB_REACH + 1) is None
+
+
+def test_climbing_up_and_down():
+    assert arena.climb(0, 1, 1000, speed=160.0) == 160.0
+    assert arena.climb(200, -1, 1000, speed=160.0) == 40.0
+
+
+def test_climbing_stops_at_the_ground_and_the_ceiling():
+    assert arena.climb(10, -1, 1000, speed=160.0) == 0.0
+    assert arena.climb(arena.MAX_CLIMB - 10, 1, 1000, speed=160.0) == arena.MAX_CLIMB
+
+
+def test_a_fully_climbed_squirrel_still_fits_on_the_stage():
+    """MAX_CLIMB is forced by the stage ceiling, not chosen. Guard it.
+
+    If squirrel art ever gets taller this fails, which is the point — otherwise
+    the tallest squirrel's ears quietly leave the top of the stage.
+    """
+    import visual_game
+
+    tallest_sprite = 184          # Big Bumboy, the tallest drawing in assets/
+    feet = visual_game.GROUND_Y + 10 - arena.MAX_CLIMB
+    assert feet - tallest_sprite >= visual_game.STAGE_TOP
