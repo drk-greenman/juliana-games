@@ -35,8 +35,16 @@ Where you're standing decides what connects:
 | Moves | Only work |
 | --- | --- |
 | Tail Smack, Cheek Barrel, Scratch, Steal | up close |
-| Acorn Blast, Chirp, Chirp Insanely | from a distance |
+| Acorn Blast, Chirp, Chirp Insanely | at middle distance |
 | Dance, Moonwalk, Scurry, Flex, Eat Garden | anywhere |
+
+Back off too far and even an acorn drops short, so there's a middle distance worth
+holding rather than just running away.
+
+The world is three screens wide and scrolls as you walk. Neither squirrel can get more
+than about a screen from the other, so you'll sometimes walk into a soft stop until the
+rival's wandering gives you more rope — the two of you roam the world together rather
+than either one touring it alone.
 
 A move that can't reach is dimmed — you can still pick it, but it whiffs for no
 damage. The rival wanders at random rather than cleverly, so it does this to
@@ -105,6 +113,10 @@ Three things that catch people out:
   they're only a guide.
 
 Any size works — it's scaled with nearest-neighbour, so pixel art stays sharp.
+
+The world is three screens wide, so your background is **tiled** across it — the same
+picture repeated three times. Something with no strong left or right edge tiles best.
+(Several different scenes, painted to the full world width, is the next thing planned.)
 
 ## The borrowed squirrels
 
