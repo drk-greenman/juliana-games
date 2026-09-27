@@ -44,3 +44,26 @@ def reaches(move, player_x, rival_x) -> bool:
         return True
     close = is_close(player_x, rival_x)
     return close if move.reach == "melee" else not close
+
+
+# How fast each one walks, in pixels per second. The rival is slower than the
+# player so that chasing it down is winnable.
+PLAYER_SPEED = 220.0
+RIVAL_SPEED = 90.0
+
+
+def clamp_player(x, rival_x) -> float:
+    """Keep the player on the stage and to the left of the rival."""
+    x = max(WALK_LEFT, min(WALK_RIGHT, x))
+    return max(WALK_LEFT, min(x, rival_x - MIN_GAP))
+
+
+def clamp_rival(x, player_x) -> float:
+    """Keep the rival on the stage and to the right of the player."""
+    x = max(WALK_LEFT, min(WALK_RIGHT, x))
+    return min(WALK_RIGHT, max(x, player_x + MIN_GAP))
+
+
+def walk_player(x, direction, dt_ms, rival_x, speed=PLAYER_SPEED) -> float:
+    """Step the player `direction` (-1 left, +1 right) for `dt_ms` milliseconds."""
+    return clamp_player(x + direction * speed * (dt_ms / 1000.0), rival_x)
