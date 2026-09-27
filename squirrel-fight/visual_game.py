@@ -250,7 +250,7 @@ class Game:
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             direction += 1
         if direction:
-            self.player_x = arena.walk_player(self.player_x, direction, dt_ms, self.rival_x)
+            self.player_x = arena.walk(self.player_x, 0, direction, dt_ms, self.rival_x, 0)
         self.rival_x, self.wander = arena.step_wander(
             self.wander, self.rival_x, self.player_x, dt_ms
         )

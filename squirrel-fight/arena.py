@@ -119,23 +119,65 @@ def reaches(move, player_x, player_y, rival_x, rival_y) -> bool:
     return here == MID
 
 
-def clamp_player(x, rival_x) -> float:
-    """Keep the player on the stage, left of the rival, and inside the leash."""
-    low = max(WALK_LEFT, rival_x - LEASH)
-    high = min(WALK_RIGHT - MIN_GAP, rival_x - MIN_GAP)
-    return max(low, min(high, x))
+def clamp_walk(x, my_y, other_x, other_y) -> float:
+    """Keep a walking squirrel in the world, inside the leash, and out of the other.
+
+    Side-agnostic. Squirrels used to be unable to pass each other, so the player
+    was permanently the left fighter — but now that one can walk underneath
+    another that is up a tree, either may end up on either side.
+    """
+    x = max(WALK_LEFT, min(WALK_RIGHT, x))
+    x = max(other_x - LEASH, min(other_x + LEASH, x))
+    if abs(my_y - other_y) < CLIMB_CLEARANCE and abs(x - other_x) < MIN_GAP:
+        # Same sort of height, so they bump. `shove` already knows how to push
+        # something clear without letting it fall out of the world, which is the
+        # one case a plain "step back MIN_GAP" gets wrong next to a wall.
+        x = shove(x, other_x)
+    return x
 
 
-def clamp_rival(x, player_x) -> float:
-    """Keep the rival on the stage, right of the player, and inside the leash."""
-    low = max(WALK_LEFT + MIN_GAP, player_x + MIN_GAP)
-    high = min(WALK_RIGHT, player_x + LEASH)
-    return max(low, min(high, x))
+def walk(x, my_y, direction, dt_ms, other_x, other_y, speed=PLAYER_SPEED) -> float:
+    """Step `direction` (-1 left, +1 right) for `dt_ms` milliseconds."""
+    return clamp_walk(x + direction * speed * (dt_ms / 1000.0), my_y, other_x, other_y)
 
 
-def walk_player(x, direction, dt_ms, rival_x, speed=PLAYER_SPEED) -> float:
-    """Step the player `direction` (-1 left, +1 right) for `dt_ms` milliseconds."""
-    return clamp_player(x + direction * speed * (dt_ms / 1000.0), rival_x)
+def shove(grounded_x, lander_x) -> float:
+    """Where a squirrel ends up when something climbs down onto it.
+
+    It goes to whichever side of the lander it is already on, unless that would
+    put it outside the world — the walkable world is 2600px against a 170px
+    MIN_GAP, so the other side always has room.
+    """
+    if grounded_x <= lander_x:
+        near, far = lander_x - MIN_GAP, lander_x + MIN_GAP
+    else:
+        near, far = lander_x + MIN_GAP, lander_x - MIN_GAP
+    if WALK_LEFT <= near <= WALK_RIGHT:
+        return near
+    return max(WALK_LEFT, min(WALK_RIGHT, far))
+
+
+def resolve_overlap(player_x, player_y, rival_x, rival_y) -> tuple:
+    """Sort out two squirrels that have ended up in the same place.
+
+    Returns the four coordinates after any shove or blocked descent. Only
+    vertical movement can create this — `clamp_walk` already stops a walking
+    squirrel from causing it.
+    """
+    if (abs(player_y - rival_y) >= CLIMB_CLEARANCE
+            or abs(player_x - rival_x) >= MIN_GAP):
+        return player_x, player_y, rival_x, rival_y
+
+    # Whoever is nearer the ground is the one in the way.
+    if player_y <= rival_y:
+        if player_y > 0:
+            # Both up a trunk. Shoving one sideways would leave it gripping thin
+            # air, so the higher one stops instead.
+            return player_x, player_y, rival_x, player_y + CLIMB_CLEARANCE
+        return shove(player_x, rival_x), player_y, rival_x, rival_y
+    if rival_y > 0:
+        return player_x, rival_y + CLIMB_CLEARANCE, rival_x, rival_y
+    return player_x, player_y, shove(rival_x, player_x), rival_y
 
 
 def tree_near(x):
@@ -171,7 +213,7 @@ def step_wander(wander, rival_x, player_x, dt_ms, rng=random) -> tuple:
         direction = rng.choice((-1, 1))
         remaining = rng.randint(WANDER_MIN_MS, WANDER_MAX_MS)
 
-    x = clamp_rival(rival_x + direction * RIVAL_SPEED * (dt_ms / 1000.0), player_x)
+    x = clamp_walk(rival_x + direction * RIVAL_SPEED * (dt_ms / 1000.0), 0, player_x, 0)
     if x == rival_x and dt_ms > 0:
         # Walked into a wall or into the player. Turn around rather than
         # standing there pushing against it for the rest of the stretch.

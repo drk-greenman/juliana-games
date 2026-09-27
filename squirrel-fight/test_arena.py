@@ -39,49 +39,59 @@ def test_any_reach_works_everywhere():
 
 def test_player_stops_at_the_world_edge():
     # Rival close enough to the left edge that the leash isn't the binding limit.
-    assert arena.clamp_player(-500, 600) == arena.WALK_LEFT
+    assert arena.clamp_walk(-500, 0, 600, 0) == arena.WALK_LEFT
 
 
 def test_player_is_held_back_by_the_leash():
-    assert arena.clamp_player(-500, 1670) == 1670 - arena.LEASH
+    assert arena.clamp_walk(-500, 0, 1670, 0) == 1670 - arena.LEASH
 
 
-def test_player_stops_short_of_the_rival():
-    assert arena.clamp_player(900, 700) == 700 - arena.MIN_GAP
+def test_walking_squirrels_keep_min_gap_apart():
+    # Side-agnostic now: it only insists on separation, not on who is left.
+    assert arena.clamp_walk(750, 0, 700, 0) == 700 + arena.MIN_GAP
+    assert arena.clamp_walk(650, 0, 700, 0) == 700 - arena.MIN_GAP
 
 
 def test_rival_stops_at_the_world_edge():
-    assert arena.clamp_rival(9999, arena.WALK_RIGHT - arena.MIN_GAP) == arena.WALK_RIGHT
+    assert arena.clamp_walk(9999, 0, arena.WALK_RIGHT - arena.MIN_GAP, 0) == arena.WALK_RIGHT
 
 
 def test_rival_is_held_back_by_the_leash():
-    assert arena.clamp_rival(9999, 1210) == 1210 + arena.LEASH
+    assert arena.clamp_walk(9999, 0, 1210, 0) == 1210 + arena.LEASH
 
 
-def test_rival_stops_short_of_the_player():
-    assert arena.clamp_rival(100, 400) == 400 + arena.MIN_GAP
+def test_a_squirrel_already_clear_is_left_where_it_is():
+    # 260 apart is more than MIN_GAP, so nothing pushes it.
+    assert arena.clamp_walk(660, 0, 400, 0) == 660
 
 
-def test_squirrels_never_swap_sides():
-    player = arena.clamp_player(9999, arena.RIVAL_START)
-    rival = arena.clamp_rival(-9999, player)
-    assert player < rival
+def test_squirrels_cannot_walk_through_each_other_on_the_ground():
+    """They pass when one is up a tree, but never while both are walking.
+
+    Checked by stepping rather than teleporting, because walking is what the
+    game actually does — a single huge jump would clear the gap in one go.
+    """
+    x = arena.RIVAL_START - 400
+    for _ in range(600):
+        x = arena.walk(x, 0, 1, 16, arena.RIVAL_START, 0)
+    assert x < arena.RIVAL_START
+    assert arena.RIVAL_START - x >= arena.MIN_GAP
 
 
 def test_walking_right_moves_at_the_given_speed():
     # Player at 1200 with the rival at RIVAL_START has room either way inside the leash.
-    moved = arena.walk_player(1200, 1, 1000, arena.RIVAL_START, speed=220.0)
+    moved = arena.walk(1200, 0, 1, 1000, arena.RIVAL_START, 0, speed=220.0)
     assert moved == 1200 + 220.0
 
 
 def test_walking_left_moves_the_other_way():
-    moved = arena.walk_player(1200, -1, 1000, arena.RIVAL_START, speed=220.0)
+    moved = arena.walk(1200, 0, -1, 1000, arena.RIVAL_START, 0, speed=220.0)
     assert moved == 1200 - 220.0
 
 
 def test_walking_is_clamped_like_everything_else():
     # Hard left with the rival near the left edge: the world edge stops us.
-    moved = arena.walk_player(arena.WALK_LEFT + 10, -1, 1000, 600, speed=220.0)
+    moved = arena.walk(arena.WALK_LEFT + 10, 0, -1, 1000, 600, 0, speed=220.0)
     assert moved == arena.WALK_LEFT
 
 
@@ -149,13 +159,13 @@ def test_the_player_cannot_outrun_the_leash():
     """Walking hard away from a stationary rival stops at the leash, not the edge."""
     player_x = arena.PLAYER_START
     for _ in range(600):
-        player_x = arena.walk_player(player_x, -1, 16, arena.RIVAL_START)
+        player_x = arena.walk(player_x, 0, -1, 16, arena.RIVAL_START, 0)
     assert arena.gap(player_x, 0, arena.RIVAL_START, 0) == arena.LEASH
 
 
 def test_neither_squirrel_can_be_pushed_out_of_the_world():
-    assert arena.clamp_player(9999, arena.WALK_RIGHT) <= arena.WALK_RIGHT - arena.MIN_GAP
-    assert arena.clamp_rival(-9999, arena.WALK_LEFT) >= arena.WALK_LEFT + arena.MIN_GAP
+    assert arena.clamp_walk(9999, 0, arena.WALK_RIGHT, 0) <= arena.WALK_RIGHT - arena.MIN_GAP
+    assert arena.clamp_walk(-9999, 0, arena.WALK_LEFT, 0) >= arena.WALK_LEFT + arena.MIN_GAP
 
 
 def test_camera_centres_between_the_two_squirrels():
@@ -233,3 +243,59 @@ def test_a_fully_climbed_squirrel_still_fits_on_the_stage():
     tallest_sprite = 184          # Big Bumboy, the tallest drawing in assets/
     feet = visual_game.GROUND_Y + 10 - arena.MAX_CLIMB
     assert feet - tallest_sprite >= visual_game.STAGE_TOP
+
+
+def test_squirrels_bump_when_at_the_same_height():
+    # Trying to stand exactly on someone stops MIN_GAP short, on the side you
+    # came from — ties go left, since the push uses `x <= other_x`.
+    assert arena.clamp_walk(1000, 0, 1000, 0) == 1000 - arena.MIN_GAP
+    assert arena.clamp_walk(1100, 0, 1000, 0) == 1000 + arena.MIN_GAP
+
+
+def test_squirrels_pass_freely_when_one_is_up_a_tree():
+    # Same x, but 240 apart vertically: no horizontal constraint at all.
+    assert arena.clamp_walk(1000, 0, 1000, arena.MAX_CLIMB) == 1000
+
+
+def test_you_can_walk_out_the_far_side_of_an_occupied_tree():
+    trunk = arena.TREES[2]
+    x = trunk - 200
+    for _ in range(400):
+        x = arena.walk(x, 0, 1, 16, trunk, arena.MAX_CLIMB)
+    assert x > trunk, "should have passed under the tree and out the other side"
+
+
+def test_clamp_walk_still_honours_the_world_and_the_leash():
+    assert arena.clamp_walk(-9999, 0, 600, arena.MAX_CLIMB) == arena.WALK_LEFT
+    assert arena.clamp_walk(9999, 0, 1000, arena.MAX_CLIMB) == 1000 + arena.LEASH
+
+
+def test_a_shove_lands_exactly_min_gap_away():
+    assert arena.shove(1000, 1050) == 1050 - arena.MIN_GAP
+    assert arena.shove(1100, 1050) == 1050 + arena.MIN_GAP
+
+
+def test_a_shove_against_the_world_edge_goes_the_other_way():
+    # Nowhere to go on the left, so the shoved squirrel goes right instead.
+    shoved = arena.shove(arena.WALK_LEFT, arena.WALK_LEFT + 10)
+    assert arena.WALK_LEFT <= shoved <= arena.WALK_RIGHT
+    assert shoved == arena.WALK_LEFT + 10 + arena.MIN_GAP
+
+
+def test_landing_on_a_grounded_squirrel_shoves_it():
+    # Rival descends onto the player, who is standing on the ground below.
+    px, py, rx, ry = arena.resolve_overlap(1000, 0, 1000, 10)
+    assert py == 0 and ry == 10           # heights untouched
+    assert abs(px - rx) == arena.MIN_GAP  # the player got moved aside
+
+
+def test_landing_on_a_climbing_squirrel_is_blocked_instead():
+    # Both up the same trunk: nobody gets shoved off it, the higher one stops.
+    px, py, rx, ry = arena.resolve_overlap(1000, 100, 1000, 110)
+    assert px == 1000 and rx == 1000      # nobody moved sideways
+    assert ry == 100 + arena.CLIMB_CLEARANCE
+
+
+def test_no_overlap_means_nothing_changes():
+    before = (1000, 0, 1400, 0)
+    assert arena.resolve_overlap(*before) == before
