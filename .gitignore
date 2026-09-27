@@ -1,2 +1,10 @@
 .env
 .superpowers/
+
+# macOS drops these into every folder you open in Finder.
+.DS_Store
+
+# Python leftovers from running the games and the tests.
+__pycache__/
+*.pyc
+.pytest_cache/
