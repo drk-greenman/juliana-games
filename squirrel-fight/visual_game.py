@@ -205,7 +205,7 @@ class Game:
         hp_before = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
         result = resolve_turn(
             self.player, move, self.rival, rival_move,
-            close=arena.is_close(self.player_x, self.rival_x),
+            band=arena.band(self.player_x, self.rival_x),
         )
         hp_after = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
         self.timeline = build_timeline(
@@ -322,6 +322,10 @@ class Game:
             pygame.draw.rect(self.screen, color, fill, border_radius=8)
 
     def _draw_stage(self):
+        # Everything on the stage is drawn relative to the camera, which is just
+        # the midpoint between the fighters clamped to the world.
+        camera = arena.camera_x(self.player_x, self.rival_x)
+
         # The arena drawing is a frame — trunks down the sides, leaves above,
         # dirt below — with a see-through middle, so the sky and grass are laid
         # down first and show through it rather than being replaced by it.
@@ -331,14 +335,21 @@ class Game:
                          (0, GROUND_Y, WINDOW_SIZE[0], STAGE_BOTTOM - GROUND_Y))
         background = load_background()
         if background is not None:
-            self.screen.blit(background, (0, STAGE_TOP))
+            # One screen of scenery repeated across a world several screens wide.
+            # A tiled frame repeats its edges, which reads as a continuous burrow
+            # wall — good enough until there is proper wide scenery to draw.
+            tile_width = background.get_width()
+            left = int(camera // tile_width) * tile_width
+            while left < camera + WINDOW_SIZE[0]:
+                self.screen.blit(background, (left - camera, STAGE_TOP))
+                left += tile_width
         # Squirrels are drawn after the HP panel, so a big enough hop or a wide
         # rotation would otherwise paint over the HP bars. The effects are tuned
         # to stay inside the stage; this makes that a guarantee rather than a
         # thing to remember every time an effect is added.
         self.screen.set_clip(pygame.Rect(0, STAGE_TOP, WINDOW_SIZE[0], STAGE_BOTTOM - STAGE_TOP))
-        self._draw_squirrel(PLAYER, self.player_x)
-        self._draw_squirrel(RIVAL, self.rival_x)
+        self._draw_squirrel(PLAYER, self.player_x - camera)
+        self._draw_squirrel(RIVAL, self.rival_x - camera)
         self.screen.set_clip(None)
 
     def _pose_for(self, actor):
