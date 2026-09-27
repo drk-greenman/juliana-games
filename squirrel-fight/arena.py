@@ -195,17 +195,19 @@ def climb(y, direction, dt_ms, speed=CLIMB_SPEED) -> float:
 
 @dataclass(frozen=True)
 class Wander:
-    """The rival's current whim: which way, and for how much longer."""
+    """The rival's current whim: which way along, which way up, and for how long."""
 
     direction: int = 1
     remaining_ms: int = 0
+    climb_direction: int = 0        # -1 down, 0 staying put, +1 up
+    climb_remaining_ms: int = 0
 
 
-def step_wander(wander, rival_x, player_x, dt_ms, rng=random) -> tuple:
-    """Amble the rival along for `dt_ms`. Returns `(new_x, new_wander)`.
+def step_wander(wander, rival_x, rival_y, player_x, player_y, dt_ms, rng=random) -> tuple:
+    """Amble the rival along and up for `dt_ms`. Returns `(x, y, wander)`.
 
-    The direction is random rather than tactical, so the rival regularly
-    wanders itself out of range of the move it picked. That is the joke.
+    Both whims are random rather than tactical, so the rival regularly strands
+    itself halfway up a tree with nothing in range. That is the joke.
     """
     direction = wander.direction
     remaining = wander.remaining_ms - dt_ms
@@ -213,9 +215,26 @@ def step_wander(wander, rival_x, player_x, dt_ms, rng=random) -> tuple:
         direction = rng.choice((-1, 1))
         remaining = rng.randint(WANDER_MIN_MS, WANDER_MAX_MS)
 
-    x = clamp_walk(rival_x + direction * RIVAL_SPEED * (dt_ms / 1000.0), 0, player_x, 0)
-    if x == rival_x and dt_ms > 0:
-        # Walked into a wall or into the player. Turn around rather than
-        # standing there pushing against it for the rest of the stretch.
-        direction = -direction
-    return x, Wander(direction=direction, remaining_ms=remaining)
+    climb_direction = wander.climb_direction
+    climb_remaining = wander.climb_remaining_ms - dt_ms
+    if climb_remaining <= 0:
+        # Weighted towards staying on the ground, so it doesn't spend the whole
+        # fight up a tree.
+        climb_direction = rng.choice((-1, 0, 0, 1))
+        climb_remaining = rng.randint(CLIMB_MIN_MS, CLIMB_MAX_MS)
+
+    y = rival_y
+    if tree_near(rival_x) is not None or rival_y > 0:
+        y = climb(rival_y, climb_direction, dt_ms, RIVAL_CLIMB_SPEED)
+
+    x = rival_x
+    if y <= 0:
+        # Only a squirrel with its feet on the ground ambles sideways; off the
+        # ground it is gripping a trunk.
+        x = clamp_walk(rival_x + direction * RIVAL_SPEED * (dt_ms / 1000.0),
+                       y, player_x, player_y)
+        if x == rival_x and dt_ms > 0:
+            # Walked into a wall or into the player. Turn around rather than
+            # standing there pushing against it for the rest of the stretch.
+            direction = -direction
+    return x, y, Wander(direction, remaining, climb_direction, climb_remaining)

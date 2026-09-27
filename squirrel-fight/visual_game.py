@@ -131,6 +131,8 @@ class Game:
         self.hover = None
         self.player_x = arena.PLAYER_START
         self.rival_x = arena.RIVAL_START
+        self.player_y = 0.0
+        self.rival_y = 0.0
         self.wander = arena.Wander()
 
     # ----- state changes -------------------------------------------------
@@ -152,6 +154,8 @@ class Game:
         # wherever the last fight happened to finish.
         self.player_x = arena.PLAYER_START
         self.rival_x = arena.RIVAL_START
+        self.player_y = 0.0
+        self.rival_y = 0.0
         self.wander = arena.Wander()
         self.state = "battle"
 
@@ -251,8 +255,8 @@ class Game:
             direction += 1
         if direction:
             self.player_x = arena.walk(self.player_x, 0, direction, dt_ms, self.rival_x, 0)
-        self.rival_x, self.wander = arena.step_wander(
-            self.wander, self.rival_x, self.player_x, dt_ms
+        self.rival_x, self.rival_y, self.wander = arena.step_wander(
+            self.wander, self.rival_x, self.rival_y, self.player_x, self.player_y, dt_ms
         )
 
     def draw(self):

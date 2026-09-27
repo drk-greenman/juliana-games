@@ -110,9 +110,11 @@ class FakeRandom:
 
 
 def test_wander_picks_a_direction_when_its_stretch_runs_out():
-    rng = FakeRandom(choices=[1], ints=[800])
-    x, wander = arena.step_wander(arena.Wander(direction=-1, remaining_ms=0),
-                                  arena.RIVAL_START, arena.PLAYER_START, 100, rng=rng)
+    # Two draws now, not one: the vertical whim expires at the same moment.
+    rng = FakeRandom(choices=[1, 0], ints=[800, 500])
+    x, _, wander = arena.step_wander(
+        arena.Wander(direction=-1, remaining_ms=0, climb_remaining_ms=0),
+        arena.RIVAL_START, 0.0, arena.PLAYER_START, 0.0, 100, rng=rng)
     assert wander.direction == 1
     assert wander.remaining_ms == 800
     assert x > arena.RIVAL_START
@@ -120,8 +122,9 @@ def test_wander_picks_a_direction_when_its_stretch_runs_out():
 
 def test_wander_keeps_going_while_its_stretch_lasts():
     rng = FakeRandom(choices=[], ints=[])
-    x, wander = arena.step_wander(arena.Wander(direction=1, remaining_ms=500),
-                                  arena.RIVAL_START, arena.PLAYER_START, 100, rng=rng)
+    x, _, wander = arena.step_wander(
+        arena.Wander(direction=1, remaining_ms=500, climb_remaining_ms=500),
+        arena.RIVAL_START, 0.0, arena.PLAYER_START, 0.0, 100, rng=rng)
     assert wander.direction == 1
     assert wander.remaining_ms == 400
     assert x > arena.RIVAL_START
@@ -130,17 +133,18 @@ def test_wander_keeps_going_while_its_stretch_lasts():
 def test_wander_turns_around_at_the_world_edge():
     rng = FakeRandom(choices=[], ints=[])
     # The player has to be pressed against the right edge for the rival to reach it.
-    _, wander = arena.step_wander(arena.Wander(direction=1, remaining_ms=500),
-                                  arena.WALK_RIGHT, arena.WALK_RIGHT - arena.MIN_GAP,
-                                  100, rng=rng)
+    _, _, wander = arena.step_wander(
+        arena.Wander(direction=1, remaining_ms=500, climb_remaining_ms=500),
+        arena.WALK_RIGHT, 0.0, arena.WALK_RIGHT - arena.MIN_GAP, 0.0, 100, rng=rng)
     assert wander.direction == -1
 
 
 def test_wander_turns_around_at_the_leash():
     rng = FakeRandom(choices=[], ints=[])
     at_leash = arena.PLAYER_START + arena.LEASH
-    _, wander = arena.step_wander(arena.Wander(direction=1, remaining_ms=500),
-                                  at_leash, arena.PLAYER_START, 100, rng=rng)
+    _, _, wander = arena.step_wander(
+        arena.Wander(direction=1, remaining_ms=500, climb_remaining_ms=500),
+        at_leash, 0.0, arena.PLAYER_START, 0.0, 100, rng=rng)
     assert wander.direction == -1
 
 
@@ -148,9 +152,9 @@ def test_wander_stays_inside_the_band_and_the_leash_over_many_steps():
     import random as real_random
     real_random.seed(1)
     wander = arena.Wander()
-    x = arena.RIVAL_START
+    x, y = arena.RIVAL_START, 0.0
     for _ in range(2000):
-        x, wander = arena.step_wander(wander, x, arena.PLAYER_START, 16)
+        x, y, wander = arena.step_wander(wander, x, y, arena.PLAYER_START, 0.0, 16)
         assert arena.WALK_LEFT <= x <= arena.WALK_RIGHT
         assert arena.PLAYER_START + arena.MIN_GAP <= x <= arena.PLAYER_START + arena.LEASH
 
@@ -299,3 +303,42 @@ def test_landing_on_a_climbing_squirrel_is_blocked_instead():
 def test_no_overlap_means_nothing_changes():
     before = (1000, 0, 1400, 0)
     assert arena.resolve_overlap(*before) == before
+
+
+def test_the_rival_climbs_when_it_is_at_a_tree():
+    rng = FakeRandom(choices=[1, 1], ints=[800, 800])
+    trunk = arena.TREES[2]
+    _, y, _ = arena.step_wander(arena.Wander(remaining_ms=0, climb_remaining_ms=0),
+                                trunk, 0.0, trunk - 400, 0.0, 100, rng=rng)
+    assert y > 0
+
+
+def test_the_rival_cannot_climb_in_open_ground():
+    rng = FakeRandom(choices=[1, 1], ints=[800, 800])
+    nowhere = arena.TREES[2] + 400          # well away from any trunk
+    _, y, _ = arena.step_wander(arena.Wander(remaining_ms=0, climb_remaining_ms=0),
+                                nowhere, 0.0, nowhere - 400, 0.0, 100, rng=rng)
+    assert y == 0
+
+
+def test_the_rival_stays_put_horizontally_while_off_the_ground():
+    rng = FakeRandom(choices=[], ints=[])
+    trunk = arena.TREES[2]
+    x, y, _ = arena.step_wander(
+        arena.Wander(direction=1, remaining_ms=500,
+                     climb_direction=0, climb_remaining_ms=500),
+        trunk, 100.0, trunk - 400, 0.0, 100, rng=rng)
+    assert x == trunk, "a squirrel up a trunk should not drift sideways"
+    assert y == 100.0
+
+
+def test_the_rival_wander_stays_inside_every_limit():
+    import random as real_random
+    real_random.seed(3)
+    wander = arena.Wander()
+    x, y = arena.RIVAL_START, 0.0
+    for _ in range(4000):
+        x, y, wander = arena.step_wander(wander, x, y, arena.PLAYER_START, 0.0, 16)
+        assert arena.WALK_LEFT <= x <= arena.WALK_RIGHT
+        assert 0 <= y <= arena.MAX_CLIMB
+        assert abs(x - arena.PLAYER_START) <= arena.LEASH
