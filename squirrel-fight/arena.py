@@ -29,6 +29,15 @@ CLOSE_RANGE = 300
 PLAYER_START = 250
 RIVAL_START = 710
 
+# How fast each one walks, in pixels per second. The rival is slower than the
+# player so that chasing it down is winnable.
+PLAYER_SPEED = 220.0
+RIVAL_SPEED = 90.0
+
+# How long the rival keeps ambling one way before picking a new direction.
+WANDER_MIN_MS = 400
+WANDER_MAX_MS = 1200
+
 
 def gap(player_x, rival_x) -> float:
     return abs(player_x - rival_x)
@@ -46,12 +55,6 @@ def reaches(move, player_x, rival_x) -> bool:
     return close if move.reach == "melee" else not close
 
 
-# How fast each one walks, in pixels per second. The rival is slower than the
-# player so that chasing it down is winnable.
-PLAYER_SPEED = 220.0
-RIVAL_SPEED = 90.0
-
-
 def clamp_player(x, rival_x) -> float:
     """Keep the player on the stage and to the left of the rival."""
     x = max(WALK_LEFT, min(WALK_RIGHT, x))
@@ -67,11 +70,6 @@ def clamp_rival(x, player_x) -> float:
 def walk_player(x, direction, dt_ms, rival_x, speed=PLAYER_SPEED) -> float:
     """Step the player `direction` (-1 left, +1 right) for `dt_ms` milliseconds."""
     return clamp_player(x + direction * speed * (dt_ms / 1000.0), rival_x)
-
-
-# How long the rival keeps ambling one way before picking a new direction.
-WANDER_MIN_MS = 400
-WANDER_MAX_MS = 1200
 
 
 @dataclass(frozen=True)
