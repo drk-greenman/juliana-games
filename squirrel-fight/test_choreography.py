@@ -352,24 +352,36 @@ def build_one_sided(player_move, player_outcome):
 
 def test_melee_whiff_says_the_rival_is_too_far():
     move = Move("Tail Smack", "attack", "", dmg_range=(10, 13), reach="melee")
-    outcome = FighterTurnOutcome(move_name="Tail Smack", whiffed=True)
+    outcome = FighterTurnOutcome(move_name="Tail Smack", whiff_reason="too_far")
     captions = " ".join(captions_of(build_one_sided(move, outcome)))
     assert "too far away" in captions
     assert "shrugs it off" not in captions
 
 
-def test_ranged_whiff_says_the_rival_is_too_close():
+def test_ranged_whiff_up_close_says_too_close():
     move = Move("Acorn Blast", "attack", "", dmg_range=(8, 16), reach="ranged")
-    outcome = FighterTurnOutcome(move_name="Acorn Blast", whiffed=True)
+    outcome = FighterTurnOutcome(move_name="Acorn Blast", whiff_reason="too_close")
     captions = " ".join(captions_of(build_one_sided(move, outcome)))
     assert "too close" in captions
     assert "shrugs it off" not in captions
 
 
+def test_ranged_whiff_from_the_far_band_drops_short():
+    move = Move("Acorn Blast", "attack", "", dmg_range=(8, 16), reach="ranged")
+    outcome = FighterTurnOutcome(move_name="Acorn Blast", whiff_reason="too_far")
+    captions = " ".join(captions_of(build_one_sided(move, outcome)))
+    assert "drops well short" in captions
+    assert "too close" not in captions
+
+
 def test_a_whiff_does_not_stagger_the_other_squirrel():
     move = Move("Tail Smack", "attack", "", dmg_range=(10, 13), reach="melee")
-    outcome = FighterTurnOutcome(move_name="Tail Smack", whiffed=True)
+    outcome = FighterTurnOutcome(move_name="Tail Smack", whiff_reason="too_far")
     timeline = build_one_sided(move, outcome)
     effects = {cue.effect for cue in timeline.cues if cue.actor == RIVAL}
     assert "stagger" not in effects
     assert "flash" not in effects
+    # The previous version of this test passed whether or not the whiff branch
+    # existed, because the old zero-damage path also skipped stagger and flash.
+    # No brace cue is what actually tells a whiff apart from a shrug.
+    assert "brace" not in effects
