@@ -92,7 +92,7 @@ def test_squirrels_stay_inside_the_world_over_a_long_idle(game):
         game.update(16)
         assert arena.WALK_LEFT <= game.player_x <= arena.WALK_RIGHT
         assert arena.WALK_LEFT <= game.rival_x <= arena.WALK_RIGHT
-        assert arena.gap(game.player_x, game.rival_x) <= arena.LEASH + 1
+        assert arena.gap(game.player_x, 0, game.rival_x, 0) <= arena.LEASH + 1
 
 
 def test_a_whole_battle_can_be_fought_to_a_finish(game):

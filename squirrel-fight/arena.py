@@ -9,6 +9,7 @@ These numbers are the fun part to retune, like the damage ranges in `moves.py`.
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass
 
@@ -58,13 +59,14 @@ WANDER_MIN_MS = 400
 WANDER_MAX_MS = 1200
 
 
-def gap(player_x, rival_x) -> float:
-    return abs(player_x - rival_x)
+def gap(player_x, player_y, rival_x, rival_y) -> float:
+    """Straight-line distance, so height counts the same as walking does."""
+    return math.hypot(player_x - rival_x, player_y - rival_y)
 
 
-def band(player_x, rival_x) -> str:
+def band(player_x, player_y, rival_x, rival_y) -> str:
     """Which of the three range bands these two are standing in."""
-    distance = gap(player_x, rival_x)
+    distance = gap(player_x, player_y, rival_x, rival_y)
     if distance <= CLOSE_RANGE:
         return CLOSE
     if distance <= LONG_RANGE:
@@ -83,11 +85,11 @@ def camera_x(player_x, rival_x) -> float:
     return max(0.0, min(WORLD_WIDTH - WINDOW_WIDTH, middle - WINDOW_WIDTH / 2.0))
 
 
-def reaches(move, player_x, rival_x) -> bool:
+def reaches(move, player_x, player_y, rival_x, rival_y) -> bool:
     """Would `move` connect from where these two are standing?"""
     if move.reach == "any":
         return True
-    here = band(player_x, rival_x)
+    here = band(player_x, player_y, rival_x, rival_y)
     if move.reach == "melee":
         return here == CLOSE
     return here == MID

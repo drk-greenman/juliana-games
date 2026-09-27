@@ -3,38 +3,38 @@ from moves import Move
 
 
 def test_gap_is_the_distance_between_them():
-    assert arena.gap(250, 710) == 460
-    assert arena.gap(710, 250) == 460
+    assert arena.gap(250, 0, 710, 0) == 460
+    assert arena.gap(710, 0, 250, 0) == 460
 
 
 def test_the_three_bands_split_at_their_thresholds():
-    assert arena.band(200, 200 + arena.CLOSE_RANGE) == arena.CLOSE
-    assert arena.band(200, 200 + arena.CLOSE_RANGE + 1) == arena.MID
-    assert arena.band(200, 200 + arena.LONG_RANGE) == arena.MID
-    assert arena.band(200, 200 + arena.LONG_RANGE + 1) == arena.FAR
+    assert arena.band(200, 0, 200 + arena.CLOSE_RANGE, 0) == arena.CLOSE
+    assert arena.band(200, 0, 200 + arena.CLOSE_RANGE + 1, 0) == arena.MID
+    assert arena.band(200, 0, 200 + arena.LONG_RANGE, 0) == arena.MID
+    assert arena.band(200, 0, 200 + arena.LONG_RANGE + 1, 0) == arena.FAR
 
 
 def test_fighters_start_in_the_ranged_band():
-    assert arena.band(arena.PLAYER_START, arena.RIVAL_START) == arena.MID
+    assert arena.band(arena.PLAYER_START, 0, arena.RIVAL_START, 0) == arena.MID
 
 
 def test_melee_reaches_only_when_close():
     move = Move("Tail Smack", "attack", "", dmg_range=(1, 1), reach="melee")
-    assert arena.reaches(move, 400, 500) is True
-    assert arena.reaches(move, 140, 820) is False
+    assert arena.reaches(move, 400, 0, 500, 0) is True
+    assert arena.reaches(move, 140, 0, 820, 0) is False
 
 
 def test_ranged_reaches_only_in_the_middle_band():
     move = Move("Acorn Blast", "attack", "", dmg_range=(1, 1), reach="ranged")
-    assert arena.reaches(move, 400, 400 + arena.LONG_RANGE) is True
-    assert arena.reaches(move, 400, 500) is False              # too close
-    assert arena.reaches(move, 400, 400 + arena.LONG_RANGE + 1) is False   # drops short
+    assert arena.reaches(move, 400, 0, 400 + arena.LONG_RANGE, 0) is True
+    assert arena.reaches(move, 400, 0, 500, 0) is False              # too close
+    assert arena.reaches(move, 400, 0, 400 + arena.LONG_RANGE + 1, 0) is False   # drops short
 
 
 def test_any_reach_works_everywhere():
     move = Move("Scurry", "defense", "", block_reduction=0.5)
-    assert arena.reaches(move, 400, 500) is True
-    assert arena.reaches(move, 140, 820) is True
+    assert arena.reaches(move, 400, 0, 500, 0) is True
+    assert arena.reaches(move, 140, 0, 820, 0) is True
 
 
 def test_player_stops_at_the_world_edge():
@@ -150,7 +150,7 @@ def test_the_player_cannot_outrun_the_leash():
     player_x = arena.PLAYER_START
     for _ in range(600):
         player_x = arena.walk_player(player_x, -1, 16, arena.RIVAL_START)
-    assert arena.gap(player_x, arena.RIVAL_START) == arena.LEASH
+    assert arena.gap(player_x, 0, arena.RIVAL_START, 0) == arena.LEASH
 
 
 def test_neither_squirrel_can_be_pushed_out_of_the_world():
@@ -178,3 +178,19 @@ def test_opening_positions_look_exactly_like_the_old_one_screen_stage():
     camera = arena.camera_x(arena.PLAYER_START, arena.RIVAL_START)
     assert arena.PLAYER_START - camera == 250
     assert arena.RIVAL_START - camera == 710
+
+
+def test_gap_is_straight_line_distance():
+    assert arena.gap(0, 0, 300, 400) == 500.0          # 3-4-5
+    assert arena.gap(300, 400, 0, 0) == 500.0
+
+
+def test_pure_height_counts_as_distance():
+    assert arena.gap(1000, 0, 1000, 240) == 240.0
+
+
+def test_height_can_push_you_out_of_melee_range():
+    # Directly above, far enough up, is still close — but add a little walking
+    # and it tips into the ranged band.
+    assert arena.band(1000, 0, 1000, arena.CLOSE_RANGE) == arena.CLOSE
+    assert arena.band(1000, 0, 1000 + 200, 240) == arena.MID

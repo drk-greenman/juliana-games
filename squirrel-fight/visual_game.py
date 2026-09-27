@@ -208,7 +208,7 @@ class Game:
         hp_before = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
         result = resolve_turn(
             self.player, move, self.rival, rival_move,
-            band=arena.band(self.player_x, self.rival_x),
+            band=arena.band(self.player_x, 0, self.rival_x, 0),
         )
         hp_after = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
         self.timeline = build_timeline(
@@ -421,7 +421,8 @@ class Game:
             fill, edge, text_color = style["fill"], style["edge"], style["text"]
             # A move that can't reach from here is dimmed but still clickable —
             # choosing it anyway and whiffing is allowed, and funny.
-            out_of_range = not arena.reaches(button.move, self.player_x, self.rival_x)
+            out_of_range = not arena.reaches(
+                button.move, self.player_x, 0, self.rival_x, 0)
             if frozen or out_of_range:
                 fill = tuple(channel // 2 for channel in fill)
                 edge = tuple(channel // 2 for channel in edge)
