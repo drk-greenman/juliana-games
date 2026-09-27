@@ -26,6 +26,25 @@ python3 squirrel-fight/visual_game.py
 Click a move, or use the number row — `1`–`9` for the first nine moves, then
 `0`, `-` and `=` for moves 10, 11 and 12. Esc quits.
 
+**Walk your squirrel** with the left and right arrow keys (or `A` and `D`) while
+you're choosing a move. The rival wanders about on its own the whole time, so the
+gap between you keeps changing.
+
+Where you're standing decides what connects:
+
+| Moves | Only work |
+| --- | --- |
+| Tail Smack, Cheek Barrel, Scratch, Steal | up close |
+| Acorn Blast, Chirp, Chirp Insanely | from a distance |
+| Dance, Moonwalk, Scurry, Flex, Eat Garden | anywhere |
+
+A move that can't reach is dimmed — you can still pick it, but it whiffs for no
+damage. The rival wanders at random rather than cleverly, so it does this to
+itself all the time.
+
+Walking is a window-version feature. The terminal version plays as it always
+has, with every move always reaching.
+
 Neither version needs an API key. Both are fully offline.
 
 ## Drawing your own squirrels
