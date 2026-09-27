@@ -199,8 +199,8 @@ def test_melee_whiffs_when_far_apart(monkeypatch):
     b = Fighter(name="B", hp=60, max_hp=60)
     move_a = make_attack("Tail Smack", (10, 13), reach="melee")
     move_b = make_heal("Eat Garden", (0, 0))
-    result = resolve_turn(a, move_a, b, move_b, close=False)
-    assert result.fighter_a.whiffed is True
+    result = resolve_turn(a, move_a, b, move_b, band="mid")
+    assert result.fighter_a.whiff_reason == "too_far"
     assert result.fighter_a.damage_dealt == 0
     assert b.hp == 60
 
@@ -211,8 +211,8 @@ def test_melee_lands_when_close(monkeypatch):
     b = Fighter(name="B", hp=60, max_hp=60)
     move_a = make_attack("Tail Smack", (10, 13), reach="melee")
     move_b = make_heal("Eat Garden", (0, 0))
-    result = resolve_turn(a, move_a, b, move_b, close=True)
-    assert result.fighter_a.whiffed is False
+    result = resolve_turn(a, move_a, b, move_b, band="close")
+    assert result.fighter_a.whiff_reason is None
     assert result.fighter_a.damage_dealt == 13
 
 
@@ -222,19 +222,19 @@ def test_ranged_whiffs_when_close(monkeypatch):
     b = Fighter(name="B", hp=60, max_hp=60)
     move_a = make_attack("Acorn Blast", (8, 16), reach="ranged")
     move_b = make_heal("Eat Garden", (0, 0))
-    result = resolve_turn(a, move_a, b, move_b, close=True)
-    assert result.fighter_a.whiffed is True
+    result = resolve_turn(a, move_a, b, move_b, band="close")
+    assert result.fighter_a.whiff_reason == "too_close"
     assert b.hp == 60
 
 
-def test_ranged_lands_when_far(monkeypatch):
+def test_ranged_lands_in_the_middle_band(monkeypatch):
     monkeypatch.setattr(battle_module.random, "randint", lambda lo, hi: hi)
     a = Fighter(name="A", hp=60, max_hp=60)
     b = Fighter(name="B", hp=60, max_hp=60)
     move_a = make_attack("Acorn Blast", (8, 16), reach="ranged")
     move_b = make_heal("Eat Garden", (0, 0))
-    result = resolve_turn(a, move_a, b, move_b, close=False)
-    assert result.fighter_a.whiffed is False
+    result = resolve_turn(a, move_a, b, move_b, band="mid")
+    assert result.fighter_a.whiff_reason is None
     assert result.fighter_a.damage_dealt == 16
 
 
@@ -244,21 +244,22 @@ def test_a_whiffed_steal_heals_nothing(monkeypatch):
     b = Fighter(name="B", hp=60, max_hp=60)
     move_a = make_attack("Steal", (6, 14), lifesteal=True, reach="melee")
     move_b = make_heal("Eat Garden", (0, 0))
-    result = resolve_turn(a, move_a, b, move_b, close=False)
-    assert result.fighter_a.whiffed is True
+    result = resolve_turn(a, move_a, b, move_b, band="far")
+    assert result.fighter_a.whiff_reason == "too_far"
     assert result.fighter_a.healed == 0
     assert a.hp == 30
 
 
 def test_defenses_and_heals_ignore_distance(monkeypatch):
     monkeypatch.setattr(battle_module.random, "randint", lambda lo, hi: hi)
-    a = Fighter(name="A", hp=30, max_hp=60)
-    b = Fighter(name="B", hp=60, max_hp=60)
-    move_a = make_heal("Eat Garden", (12, 18))
-    move_b = make_block_pct("Scurry", 0.5)
-    result = resolve_turn(a, move_a, b, move_b, close=True)
-    assert result.fighter_a.healed == 18
-    assert a.hp == 48
+    for band in ("close", "mid", "far"):
+        a = Fighter(name="A", hp=30, max_hp=60)
+        b = Fighter(name="B", hp=60, max_hp=60)
+        move_a = make_heal("Eat Garden", (12, 18))
+        move_b = make_block_pct("Scurry", 0.5)
+        result = resolve_turn(a, move_a, b, move_b, band=band)
+        assert result.fighter_a.healed == 18
+        assert a.hp == 48
 
 
 def test_no_distance_given_means_everything_reaches(monkeypatch):
@@ -268,7 +269,30 @@ def test_no_distance_given_means_everything_reaches(monkeypatch):
     move_a = make_attack("Tail Smack", (10, 13), reach="melee")
     move_b = make_attack("Acorn Blast", (8, 16), reach="ranged")
     result = resolve_turn(a, move_a, b, move_b)
-    assert result.fighter_a.whiffed is False
-    assert result.fighter_b.whiffed is False
+    assert result.fighter_a.whiff_reason is None
+    assert result.fighter_b.whiff_reason is None
     assert result.fighter_a.damage_dealt == 13
     assert result.fighter_b.damage_dealt == 16
+
+
+def test_nothing_reaches_from_the_far_band(monkeypatch):
+    monkeypatch.setattr(battle_module.random, "randint", lambda lo, hi: hi)
+    for reach in ("melee", "ranged"):
+        a = Fighter(name="A", hp=60, max_hp=60)
+        b = Fighter(name="B", hp=60, max_hp=60)
+        move_a = make_attack("Whatever", (10, 13), reach=reach)
+        move_b = make_heal("Eat Garden", (0, 0))
+        result = resolve_turn(a, move_a, b, move_b, band="far")
+        assert result.fighter_a.whiff_reason == "too_far"
+        assert result.fighter_a.damage_dealt == 0
+        assert b.hp == 60
+
+
+def test_only_a_close_ranged_move_counts_as_too_close(monkeypatch):
+    monkeypatch.setattr(battle_module.random, "randint", lambda lo, hi: hi)
+    a = Fighter(name="A", hp=60, max_hp=60)
+    b = Fighter(name="B", hp=60, max_hp=60)
+    # A melee move in the far band is too far, never "too close".
+    result = resolve_turn(a, make_attack("Tail Smack", (10, 13), reach="melee"),
+                          b, make_heal("Eat Garden", (0, 0)), band="far")
+    assert result.fighter_a.whiff_reason == "too_far"

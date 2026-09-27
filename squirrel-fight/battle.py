@@ -19,7 +19,9 @@ class FighterTurnOutcome:
     damage_dealt: int = 0
     healed: int = 0
     dodged: bool = False
-    whiffed: bool = False
+    # None when the move landed; otherwise "too_far" or "too_close", so the
+    # caption can explain itself without choreography learning any geometry.
+    whiff_reason: str | None = None
 
 
 @dataclass
@@ -62,16 +64,29 @@ def _capped_heal(raw_heal: int, hp_before: int, damage_taken: int, max_hp: int) 
     return max(0, min(raw_heal, room))
 
 
-def _reaches(move: Move, close: bool | None) -> bool:
-    """Can this move connect from here?
+def _reaches(move: Move, band: str | None) -> bool:
+    """Can this move connect from this range band?
 
-    `close` is True when the fighters are near each other, False when they are
-    apart, and None when distance isn't part of the game at all — which is how
-    the terminal version in `game.py` keeps playing exactly as it always has.
+    `band` is "close", "mid" or "far", or None when distance isn't part of the
+    game at all — which is how the terminal version in `game.py` keeps playing
+    exactly as it always has.
+
+    The band names are literals rather than imports from `arena`: the rules here
+    stay free of stage geometry, and pulling in `arena` for two strings would
+    drag pixel constants along with them.
     """
-    if close is None or move.reach == "any":
+    if band is None or move.reach == "any":
         return True
-    return close if move.reach == "melee" else not close
+    if move.reach == "melee":
+        return band == "close"
+    return band == "mid"
+
+
+def _whiff_reason(move: Move, band: str | None) -> str:
+    """Why a move that didn't reach didn't reach."""
+    if move.reach == "ranged" and band == "close":
+        return "too_close"
+    return "too_far"
 
 
 def resolve_turn(
@@ -79,7 +94,7 @@ def resolve_turn(
     move_a: Move,
     fighter_b: Fighter,
     move_b: Move,
-    close: bool | None = None,
+    band: str | None = None,
 ) -> TurnResult:
     outcome_a = FighterTurnOutcome(move_name=move_a.name)
     outcome_b = FighterTurnOutcome(move_name=move_b.name)
@@ -89,8 +104,8 @@ def resolve_turn(
     dmg_b_to_a = 0
 
     if move_a.kind == "attack":
-        if not _reaches(move_a, close):
-            outcome_a.whiffed = True
+        if not _reaches(move_a, band):
+            outcome_a.whiff_reason = _whiff_reason(move_a, band)
         else:
             raw = _roll_damage(move_a)
             defending = move_b if move_b.kind == "defense" else None
@@ -99,8 +114,8 @@ def resolve_turn(
                 outcome_b.dodged = b_dodged
 
     if move_b.kind == "attack":
-        if not _reaches(move_b, close):
-            outcome_b.whiffed = True
+        if not _reaches(move_b, band):
+            outcome_b.whiff_reason = _whiff_reason(move_b, band)
         else:
             raw = _roll_damage(move_b)
             defending = move_a if move_a.kind == "defense" else None
