@@ -46,6 +46,15 @@ than about a screen from the other, so you'll sometimes walk into a soft stop un
 rival's wandering gives you more rope — the two of you roam the world together rather
 than either one touring it alone.
 
+**Climb a tree** with Up and Down (or `W` and `S`) when you're standing at one of the five
+trunks. While you're off the ground you can't walk — climb down first, the way a squirrel
+has to let go before it can run.
+
+Height counts as distance, so going up a tree pushes you out of melee range and into
+throwing range without walking anywhere. The rival climbs too, at random, and will happily
+strand itself halfway up a tree with nothing in reach. You can walk underneath it while
+it's up there.
+
 A move that can't reach is dimmed — you can still pick it, but it whiffs for no
 damage. The rival wanders at random rather than cleverly, so it does this to
 itself all the time.
@@ -105,12 +114,12 @@ Three things that catch people out:
   loaded without an alpha channel, so genuinely transparent pixels come out **black**.
   White drops out and lets the game's own sky and grass show through. (Squirrel drawings
   are the opposite — those do want real transparency.)
-- **Draw it 4:1.** It gets stretched to 960×240, so a 4:1 image keeps its pixels square.
-  The template is 240×60. The older `background.png` is 64×36, which is why its blocks
-  look wide and squashed.
-- **The ground is near the bottom.** In the 240×60 template the ground line is row 56 and
-  the squirrels' feet land on row 58 — marked with a dotted line. Paint over the dots;
-  they're only a guide.
+- **Draw it about 2.2:1.** It gets stretched to 960×440, so a 240×110 image keeps its
+  pixels square. The template is that size. (It used to be 4:1 — the stage got taller
+  when climbing arrived, so anything drawn against the old template needs redoing.)
+- **The ground is near the bottom.** In the 240×110 template the ground line is row 106
+  and the squirrels' feet land on row 108 — marked with a dotted line. Paint over the
+  dots; they're only a guide.
 
 Any size works — it's scaled with nearest-neighbour, so pixel art stays sharp.
 
