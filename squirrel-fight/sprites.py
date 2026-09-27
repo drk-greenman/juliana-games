@@ -27,7 +27,7 @@ PIXEL_ART_MAX_HEIGHT = 48
 TARGET_HEIGHT = 180
 
 # The stage band in visual_game, between the HP panel and the message strip.
-STAGE_SIZE = (960, 240)
+STAGE_SIZE = (960, 440)
 
 # The arena drawing is a frame with an empty middle, but it was exported with no
 # alpha channel, so that middle arrived as solid white. Treating pure white as

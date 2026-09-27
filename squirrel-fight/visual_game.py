@@ -27,7 +27,7 @@ from game import RIVAL_NAMES
 from moves import MOVES
 from sprites import available_squirrels, load_background, load_pose, slug
 
-WINDOW_SIZE = (960, 640)
+WINDOW_SIZE = (960, 840)
 FPS = 60
 START_HP = 60
 
@@ -49,13 +49,16 @@ KIND_STYLE = {
 }
 
 STAGE_TOP = 92
-GROUND_Y = 316
-STAGE_BOTTOM = 332
-MESSAGE_TOP = 332
+# The stage is 440px tall so a squirrel can climb a tree and still fit under the
+# ceiling. Everything below it sits 200px lower than it used to; the bottom
+# margin is unchanged (buttons end at 826 of 840, as they ended at 626 of 640).
+GROUND_Y = 516
+STAGE_BOTTOM = 532
+MESSAGE_TOP = 532
 
 # (row top, first move index, last move index exclusive)
-BUTTON_ROWS = ((408, 0, 4), (456, 4, 7), (520, 7, 11), (584, 11, 12))
-GROUP_LABELS = ((388, "ATTACKS", "attack"), (500, "DEFENSES", "defense"), (564, "HEAL", "heal"))
+BUTTON_ROWS = ((608, 0, 4), (656, 4, 7), (720, 7, 11), (784, 11, 12))
+GROUP_LABELS = ((588, "ATTACKS", "attack"), (700, "DEFENSES", "defense"), (764, "HEAL", "heal"))
 
 # Moves 1-9 sit on the number row; 10, 11 and 12 continue onto 0, - and =.
 SHORTCUT_KEYS = (
