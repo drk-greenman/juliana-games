@@ -12,22 +12,41 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-# The window is 960 wide and squirrels are drawn by their middle, so the band
-# stops short of both edges to keep the widest one (~250px) fully on screen.
+# The world is three windows wide. The window stays 960; the camera scrolls.
+WINDOW_WIDTH = 960
+WORLD_WIDTH = 2880
+
+# Squirrels are drawn by their middle, so the walkable band stops short of both
+# world edges to keep the widest one (~250px) from hanging off.
 WALK_LEFT = 140
-WALK_RIGHT = 820
+WALK_RIGHT = WORLD_WIDTH - 140
 
 # Squirrels bump into each other rather than overlapping. Because neither can
 # cross the other, the player is always the left fighter and the rival the right.
 MIN_GAP = 170
 
-# Closer than this and melee connects; further and ranged moves do.
-CLOSE_RANGE = 300
+# Neither squirrel may get further than this from the other. At this gap each one
+# sits 350px from the centre of the screen plus ~125px of sprite — just inside the
+# 480px half-window — so it is exactly "as far apart as they can get while both
+# stay fully visible". It binds BOTH of them: leashing only the wandering rival
+# would let the player walk to the world's edge with nothing pulling it after them.
+LEASH = 700
 
-# Where they stand at the start of a battle — deliberately further apart than
-# CLOSE_RANGE, so the very first turn already poses the question.
-PLAYER_START = 250
-RIVAL_START = 710
+# The three range bands. Melee lands inside CLOSE_RANGE, ranged lands between
+# CLOSE_RANGE and LONG_RANGE, and past LONG_RANGE nothing lands at all — so
+# retreating has a cost instead of being a free way to stay safe.
+CLOSE_RANGE = 300
+LONG_RANGE = 550
+
+CLOSE = "close"
+MID = "mid"
+FAR = "far"
+
+# World centre ± 230. That keeps today's 460 opening gap, and puts the camera at
+# 960 — which lands the two squirrels on screen x250 and x710, the exact marks
+# they stood on before the world got wide. The game opens looking unchanged.
+PLAYER_START = 1210
+RIVAL_START = 1670
 
 # How fast each one walks, in pixels per second. The rival is slower than the
 # player so that chasing it down is winnable.
@@ -43,28 +62,38 @@ def gap(player_x, rival_x) -> float:
     return abs(player_x - rival_x)
 
 
-def is_close(player_x, rival_x) -> bool:
-    return gap(player_x, rival_x) <= CLOSE_RANGE
+def band(player_x, rival_x) -> str:
+    """Which of the three range bands these two are standing in."""
+    distance = gap(player_x, rival_x)
+    if distance <= CLOSE_RANGE:
+        return CLOSE
+    if distance <= LONG_RANGE:
+        return MID
+    return FAR
 
 
 def reaches(move, player_x, rival_x) -> bool:
     """Would `move` connect from where these two are standing?"""
     if move.reach == "any":
         return True
-    close = is_close(player_x, rival_x)
-    return close if move.reach == "melee" else not close
+    here = band(player_x, rival_x)
+    if move.reach == "melee":
+        return here == CLOSE
+    return here == MID
 
 
 def clamp_player(x, rival_x) -> float:
-    """Keep the player on the stage and to the left of the rival."""
-    x = max(WALK_LEFT, min(WALK_RIGHT, x))
-    return max(WALK_LEFT, min(x, rival_x - MIN_GAP))
+    """Keep the player on the stage, left of the rival, and inside the leash."""
+    low = max(WALK_LEFT, rival_x - LEASH)
+    high = min(WALK_RIGHT - MIN_GAP, rival_x - MIN_GAP)
+    return max(low, min(high, x))
 
 
 def clamp_rival(x, player_x) -> float:
-    """Keep the rival on the stage and to the right of the player."""
-    x = max(WALK_LEFT, min(WALK_RIGHT, x))
-    return min(WALK_RIGHT, max(x, player_x + MIN_GAP))
+    """Keep the rival on the stage, right of the player, and inside the leash."""
+    low = max(WALK_LEFT + MIN_GAP, player_x + MIN_GAP)
+    high = min(WALK_RIGHT, player_x + LEASH)
+    return max(low, min(high, x))
 
 
 def walk_player(x, direction, dt_ms, rival_x, speed=PLAYER_SPEED) -> float:
