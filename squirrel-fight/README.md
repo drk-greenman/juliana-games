@@ -65,6 +65,29 @@ These are all optional, and each one replaces a placeholder:
 | `john-cena_hurt.png` | While that squirrel is getting hit |
 | `john-cena_attack.png` | While that squirrel is lunging |
 | `player_idle.png`, `rival_idle.png` | Any squirrel with no drawing of its own |
+
+## The borrowed squirrels
+
+Seven rivals — Nutsy McGee, Mr. tickle bum, Chompy Von Nutsalot, lord o Grey
+Menace, SIR NUTS ALOT, lord acornut and ELON MUST — aren't hand-drawn. They all
+come from one free squirrel someone else made: a CC0 (public domain) run cycle by
+alizard, kept in `source-art/` with its credits.
+
+`make_sprites.py` takes that one squirrel, makes its white background
+see-through, picks three frames of the run to stand in for idle/attack/hurt, and
+repaints the fur a different colour per rival:
+
+```bash
+python3 squirrel-fight/make_sprites.py
+```
+
+Edit the colours in `SQUIRREL_COLORS` and run it again to recolour the lot. It
+only writes the files it generates, so hand-drawn squirrels are never clobbered.
+
+They're on all fours, so they look a bit lower and longer than the ones Juliana
+drew standing up — which is fine, they're squirrels. Replacing any of them is
+just a matter of dropping your own `<name>.png` in `assets/` and deleting that
+squirrel's line from `SQUIRREL_COLORS`.
 | `background.png` | The arena, behind the fight |
 
 The background is drawn as a frame over the sky and grass, so anything you leave
