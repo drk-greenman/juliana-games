@@ -211,7 +211,16 @@ def build_timeline(
         if move.kind == "attack":
             cues.append(Cue(start_ms, ACTION_MS, actor, "lunge"))
             hit_ms = start_ms + IMPACT_MS
-            if other_outcome.dodged:
+            if own.whiffed:
+                # The lunge still plays — it just doesn't arrive anywhere, and
+                # the other squirrel has nothing to react to.
+                if move.reach == "melee":
+                    captions.append((hit_ms, "{} swipes at thin air — {} is too far away!".format(
+                        names[actor], names[other])))
+                else:
+                    captions.append((hit_ms, "{} is far too close for {} to land!".format(
+                        names[other], move.name)))
+            elif other_outcome.dodged:
                 cues.append(Cue(start_ms + DODGE_MS, HOP_MS, other, "hop"))
                 captions.append((hit_ms, "{} dodges out of the way!".format(names[other])))
             elif own.damage_dealt > 0:

@@ -331,3 +331,45 @@ def test_a_heal_that_overflows_is_clamped_before_the_damage_lands():
     assert player_tweens[0].hp_to == 60     # clamped down from 70, not overshooting
     assert player_tweens[1].hp_to == 45     # pinned to the real post-turn HP
     assert sample(timeline, timeline.total_ms).hp[PLAYER] == 45
+
+
+def captions_of(timeline):
+    return [text for _, text in timeline.captions]
+
+
+def build_one_sided(player_move, player_outcome):
+    """A turn where only the player acts and the rival stands there."""
+    rival_move = Move("Scurry", "defense", "", block_reduction=0.5)
+    result = TurnResult(
+        fighter_a=player_outcome,
+        fighter_b=FighterTurnOutcome(move_name=rival_move.name),
+    )
+    return build_timeline(
+        "Nutsy", "Chompy", player_move, rival_move, result,
+        {PLAYER: 60, RIVAL: 60}, {PLAYER: 60, RIVAL: 60}, 60,
+    )
+
+
+def test_melee_whiff_says_the_rival_is_too_far():
+    move = Move("Tail Smack", "attack", "", dmg_range=(10, 13), reach="melee")
+    outcome = FighterTurnOutcome(move_name="Tail Smack", whiffed=True)
+    captions = " ".join(captions_of(build_one_sided(move, outcome)))
+    assert "too far away" in captions
+    assert "shrugs it off" not in captions
+
+
+def test_ranged_whiff_says_the_rival_is_too_close():
+    move = Move("Acorn Blast", "attack", "", dmg_range=(8, 16), reach="ranged")
+    outcome = FighterTurnOutcome(move_name="Acorn Blast", whiffed=True)
+    captions = " ".join(captions_of(build_one_sided(move, outcome)))
+    assert "too close" in captions
+    assert "shrugs it off" not in captions
+
+
+def test_a_whiff_does_not_stagger_the_other_squirrel():
+    move = Move("Tail Smack", "attack", "", dmg_range=(10, 13), reach="melee")
+    outcome = FighterTurnOutcome(move_name="Tail Smack", whiffed=True)
+    timeline = build_one_sided(move, outcome)
+    effects = {cue.effect for cue in timeline.cues if cue.actor == RIVAL}
+    assert "stagger" not in effects
+    assert "flash" not in effects
