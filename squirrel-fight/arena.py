@@ -67,3 +67,36 @@ def clamp_rival(x, player_x) -> float:
 def walk_player(x, direction, dt_ms, rival_x, speed=PLAYER_SPEED) -> float:
     """Step the player `direction` (-1 left, +1 right) for `dt_ms` milliseconds."""
     return clamp_player(x + direction * speed * (dt_ms / 1000.0), rival_x)
+
+
+# How long the rival keeps ambling one way before picking a new direction.
+WANDER_MIN_MS = 400
+WANDER_MAX_MS = 1200
+
+
+@dataclass(frozen=True)
+class Wander:
+    """The rival's current whim: which way, and for how much longer."""
+
+    direction: int = 1
+    remaining_ms: int = 0
+
+
+def step_wander(wander, rival_x, player_x, dt_ms, rng=random) -> tuple:
+    """Amble the rival along for `dt_ms`. Returns `(new_x, new_wander)`.
+
+    The direction is random rather than tactical, so the rival regularly
+    wanders itself out of range of the move it picked. That is the joke.
+    """
+    direction = wander.direction
+    remaining = wander.remaining_ms - dt_ms
+    if remaining <= 0:
+        direction = rng.choice((-1, 1))
+        remaining = rng.randint(WANDER_MIN_MS, WANDER_MAX_MS)
+
+    x = clamp_rival(rival_x + direction * RIVAL_SPEED * (dt_ms / 1000.0), player_x)
+    if x == rival_x and dt_ms > 0:
+        # Walked into a wall or into the player. Turn around rather than
+        # standing there pushing against it for the rest of the stretch.
+        direction = -direction
+    return x, Wander(direction=direction, remaining_ms=remaining)

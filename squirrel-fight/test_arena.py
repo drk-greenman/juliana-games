@@ -69,3 +69,53 @@ def test_walking_left_moves_the_other_way():
 def test_walking_is_clamped_like_everything_else():
     moved = arena.walk_player(arena.WALK_LEFT + 10, -1, 1000, arena.RIVAL_START, speed=220.0)
     assert moved == arena.WALK_LEFT
+
+
+class FakeRandom:
+    """A stand-in for `random` that hands back whatever the test wants."""
+
+    def __init__(self, choices, ints):
+        self.choices = list(choices)
+        self.ints = list(ints)
+
+    def choice(self, options):
+        return self.choices.pop(0)
+
+    def randint(self, low, high):
+        return self.ints.pop(0)
+
+
+def test_wander_picks_a_direction_when_its_stretch_runs_out():
+    rng = FakeRandom(choices=[1], ints=[800])
+    x, wander = arena.step_wander(arena.Wander(direction=-1, remaining_ms=0),
+                                  500, arena.PLAYER_START, 100, rng=rng)
+    assert wander.direction == 1
+    assert wander.remaining_ms == 800
+    assert x > 500
+
+
+def test_wander_keeps_going_while_its_stretch_lasts():
+    rng = FakeRandom(choices=[], ints=[])
+    x, wander = arena.step_wander(arena.Wander(direction=1, remaining_ms=500),
+                                  500, arena.PLAYER_START, 100, rng=rng)
+    assert wander.direction == 1
+    assert wander.remaining_ms == 400
+    assert x > 500
+
+
+def test_wander_turns_around_at_the_right_wall():
+    rng = FakeRandom(choices=[], ints=[])
+    _, wander = arena.step_wander(arena.Wander(direction=1, remaining_ms=500),
+                                  arena.WALK_RIGHT, arena.PLAYER_START, 100, rng=rng)
+    assert wander.direction == -1
+
+
+def test_wander_stays_inside_the_band_over_many_steps():
+    import random as real_random
+    real_random.seed(1)
+    wander = arena.Wander()
+    x = arena.RIVAL_START
+    for _ in range(2000):
+        x, wander = arena.step_wander(wander, x, arena.PLAYER_START, 16)
+        assert arena.WALK_LEFT <= x <= arena.WALK_RIGHT
+        assert x >= arena.PLAYER_START + arena.MIN_GAP
