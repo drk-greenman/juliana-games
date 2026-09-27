@@ -203,7 +203,10 @@ class Game:
         rival_move = random.choice(MOVES)
         # resolve_turn() mutates Fighter.hp in place, so snapshot first.
         hp_before = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
-        result = resolve_turn(self.player, move, self.rival, rival_move)
+        result = resolve_turn(
+            self.player, move, self.rival, rival_move,
+            close=arena.is_close(self.player_x, self.rival_x),
+        )
         hp_after = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
         self.timeline = build_timeline(
             self.player.name, self.rival.name, move, rival_move, result,
@@ -218,6 +221,9 @@ class Game:
     # ----- per-frame -----------------------------------------------------
 
     def update(self, dt_ms):
+        if self.state == "battle":
+            self._walk(dt_ms)
+            return
         if self.state != "animating":
             return
         self.elapsed_ms = min(self.elapsed_ms + dt_ms, self.timeline.total_ms)
@@ -225,6 +231,26 @@ class Game:
         if self.elapsed_ms >= self.timeline.total_ms:
             self.message = self.frame.caption
             self.state = "result" if self.outcome != "ongoing" else "battle"
+
+    def _walk(self, dt_ms):
+        """Move both squirrels while the player is choosing a move.
+
+        Arrow keys are read as held state rather than as KEYDOWN events, because
+        walking has to continue for as long as the key is down. The rival ambles
+        the whole time too, so the gap keeps changing and the player has to
+        commit at a moment when their move will actually reach.
+        """
+        keys = pygame.key.get_pressed()
+        direction = 0
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            direction -= 1
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            direction += 1
+        if direction:
+            self.player_x = arena.walk_player(self.player_x, direction, dt_ms, self.rival_x)
+        self.rival_x, self.wander = arena.step_wander(
+            self.wander, self.rival_x, self.player_x, dt_ms
+        )
 
     def draw(self):
         if self.state == "title":
