@@ -398,14 +398,17 @@ class Game:
         self.screen.blit(text, (24, MESSAGE_TOP + 26 - text.get_height() // 2))
 
     def _draw_buttons(self):
-        dimmed = self.state != "battle"
+        frozen = self.state != "battle"
         for top, caption, kind in GROUP_LABELS:
             label = self.label_font.render(caption, True, KIND_STYLE[kind]["text"])
             self.screen.blit(label, (24, top))
         for button in self.buttons:
             style = KIND_STYLE[button.move.kind]
             fill, edge, text_color = style["fill"], style["edge"], style["text"]
-            if dimmed:
+            # A move that can't reach from here is dimmed but still clickable —
+            # choosing it anyway and whiffing is allowed, and funny.
+            out_of_range = not arena.reaches(button.move, self.player_x, self.rival_x)
+            if frozen or out_of_range:
                 fill = tuple(channel // 2 for channel in fill)
                 edge = tuple(channel // 2 for channel in edge)
                 text_color = tuple(channel // 2 for channel in text_color)
