@@ -295,8 +295,10 @@ def test_walking_right_moves_at_the_given_speed():
 
 
 def test_walking_left_moves_the_other_way():
-    moved = arena.walk_player(300, -1, 1000, arena.RIVAL_START, speed=220.0)
-    assert moved == 300 - 220.0
+    # Starts at 500 rather than 300: a 220px step left from 300 would land at 80,
+    # outside the band, and the clamp would (correctly) pull it back to WALK_LEFT.
+    moved = arena.walk_player(500, -1, 1000, arena.RIVAL_START, speed=220.0)
+    assert moved == 500 - 220.0
 
 
 def test_walking_is_clamped_like_everything_else():
