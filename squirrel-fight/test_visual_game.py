@@ -118,3 +118,37 @@ def test_every_move_can_be_used_at_any_range(game):
             fresh.take_turn(move)
             run_out_the_animation(fresh)
             fresh.draw()
+
+
+def test_a_squirrel_can_climb_and_come_back_down(game):
+    game.player_x = arena.TREES[2]
+    game.player_y = 0.0
+    for _ in range(120):
+        game.player_y = arena.climb(game.player_y, 1, 16)
+    assert game.player_y == arena.MAX_CLIMB
+    game.draw()
+    for _ in range(300):
+        game.player_y = arena.climb(game.player_y, -1, 16)
+    assert game.player_y == 0.0
+
+
+def test_height_changes_which_moves_reach(game):
+    game.player_x = game.rival_x = arena.TREES[2]
+    game.player_y, game.rival_y = 0.0, 0.0
+    on_the_ground = arena.band(game.player_x, 0, game.rival_x, 0)
+    game.player_y = arena.MAX_CLIMB
+    up_a_tree = arena.band(game.player_x, game.player_y, game.rival_x, game.rival_y)
+    assert on_the_ground == arena.CLOSE
+    assert up_a_tree == arena.CLOSE     # 240 is still inside CLOSE_RANGE
+    assert arena.gap(game.player_x, game.player_y, game.rival_x, game.rival_y) == \
+        arena.MAX_CLIMB
+
+
+def test_squirrels_never_end_up_inside_each_other(game):
+    for _ in range(3000):
+        game.update(16)
+        same_height = abs(game.player_y - game.rival_y) < arena.CLIMB_CLEARANCE
+        if same_height:
+            assert abs(game.player_x - game.rival_x) >= arena.MIN_GAP - 1
+        assert 0 <= game.player_y <= arena.MAX_CLIMB
+        assert 0 <= game.rival_y <= arena.MAX_CLIMB

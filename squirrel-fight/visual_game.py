@@ -25,7 +25,7 @@ from battle import Fighter, battle_outcome, resolve_turn
 from choreography import PLAYER, RIVAL, ActorState, build_timeline, sample
 from game import RIVAL_NAMES
 from moves import MOVES
-from sprites import available_squirrels, load_background, load_pose, slug
+from sprites import available_squirrels, load_background, load_pose, load_tree, slug
 
 WINDOW_SIZE = (960, 840)
 FPS = 60
@@ -212,7 +212,7 @@ class Game:
         hp_before = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
         result = resolve_turn(
             self.player, move, self.rival, rival_move,
-            band=arena.band(self.player_x, 0, self.rival_x, 0),
+            band=arena.band(self.player_x, self.player_y, self.rival_x, self.rival_y),
         )
         hp_after = {PLAYER: self.player.hp, RIVAL: self.rival.hp}
         self.timeline = build_timeline(
@@ -248,16 +248,34 @@ class Game:
         commit at a moment when their move will actually reach.
         """
         keys = pygame.key.get_pressed()
+
+        climbing = 0
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            climbing += 1
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            climbing -= 1
+        if climbing and (arena.tree_near(self.player_x) is not None or self.player_y > 0):
+            self.player_y = arena.climb(self.player_y, climbing, dt_ms)
+
         direction = 0
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             direction -= 1
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             direction += 1
-        if direction:
-            self.player_x = arena.walk(self.player_x, 0, direction, dt_ms, self.rival_x, 0)
+        # Off the ground the squirrel is gripping a trunk, so it can only go up
+        # and down. Climb down to walk.
+        if direction and self.player_y <= 0:
+            self.player_x = arena.walk(
+                self.player_x, self.player_y, direction, dt_ms, self.rival_x, self.rival_y)
+
         self.rival_x, self.rival_y, self.wander = arena.step_wander(
             self.wander, self.rival_x, self.rival_y, self.player_x, self.player_y, dt_ms
         )
+
+        # Only vertical movement can put two squirrels in the same place.
+        (self.player_x, self.player_y,
+         self.rival_x, self.rival_y) = arena.resolve_overlap(
+            self.player_x, self.player_y, self.rival_x, self.rival_y)
 
     def draw(self):
         if self.state == "title":
@@ -350,13 +368,21 @@ class Game:
             while left < camera + WINDOW_SIZE[0]:
                 self.screen.blit(background, (left - camera, STAGE_TOP))
                 left += tile_width
+
+        # Trunks go down before the squirrels, so a climbing squirrel reads as
+        # being on the near side of the tree rather than buried in it.
+        tree = load_tree()
+        for trunk in arena.TREES:
+            left = trunk - camera - tree.get_width() // 2
+            if -tree.get_width() < left < WINDOW_SIZE[0]:
+                self.screen.blit(tree, (left, GROUND_Y + 10 - tree.get_height()))
         # Squirrels are drawn after the HP panel, so a big enough hop or a wide
         # rotation would otherwise paint over the HP bars. The effects are tuned
         # to stay inside the stage; this makes that a guarantee rather than a
         # thing to remember every time an effect is added.
         self.screen.set_clip(pygame.Rect(0, STAGE_TOP, WINDOW_SIZE[0], STAGE_BOTTOM - STAGE_TOP))
-        self._draw_squirrel(PLAYER, self.player_x - camera)
-        self._draw_squirrel(RIVAL, self.rival_x - camera)
+        self._draw_squirrel(PLAYER, self.player_x - camera, self.player_y)
+        self._draw_squirrel(RIVAL, self.rival_x - camera, self.rival_y)
         self.screen.set_clip(None)
 
     def _pose_for(self, actor):
@@ -379,7 +405,7 @@ class Game:
             return "attack"
         return "idle"
 
-    def _draw_squirrel(self, actor, center_x):
+    def _draw_squirrel(self, actor, center_x, climb_y=0.0):
         state = self.frame.actors[actor] if self.frame is not None else ActorState()
         image = load_pose(actor, self._pose_for(actor), self.art_names.get(actor))
         if actor == RIVAL:
@@ -400,7 +426,8 @@ class Game:
             if state.alpha < 1.0:
                 image.set_alpha(int(255 * state.alpha))
         rect = image.get_rect()
-        rect.midbottom = (int(center_x + state.offset_x), int(GROUND_Y + 10 + state.offset_y))
+        rect.midbottom = (int(center_x + state.offset_x),
+                          int(GROUND_Y + 10 - climb_y + state.offset_y))
         self.screen.blit(image, rect)
 
     def _message_text(self):
@@ -426,7 +453,7 @@ class Game:
             # A move that can't reach from here is dimmed but still clickable —
             # choosing it anyway and whiffing is allowed, and funny.
             out_of_range = not arena.reaches(
-                button.move, self.player_x, 0, self.rival_x, 0)
+                button.move, self.player_x, self.player_y, self.rival_x, self.rival_y)
             if frozen or out_of_range:
                 fill = tuple(channel // 2 for channel in fill)
                 edge = tuple(channel // 2 for channel in edge)
