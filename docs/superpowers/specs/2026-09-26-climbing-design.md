@@ -91,12 +91,49 @@ Note the consequence: two squirrels at the same x, one at full climb, are 240 ap
 `close` band — so climbing alone cannot take you out of melee range, but climbing plus a
 little walking can.
 
-`MIN_GAP` also keeps applying horizontally whatever the heights, which means **you cannot
-walk underneath a squirrel that is up a tree** — you stop 170px short of the trunk. That is
-a known simplification rather than an oversight: letting them overlap horizontally would
-mean deciding what happens when one climbs down onto the other. It may look like a bug in
-play, and if it grates, the fix is to drop the `MIN_GAP` check when the two are at
-meaningfully different heights.
+## Passing underneath
+
+`MIN_GAP` applies **only when the two squirrels are at similar heights** — within
+`CLIMB_CLEARANCE` of each other. Further apart vertically than that and they ignore each
+other horizontally, so you can walk right under a squirrel that is up a tree, and out the
+other side.
+
+### Squirrels can now cross
+
+This retires the invariant the walking code was built on. Until now neither squirrel could
+pass the other, so the player was permanently the left fighter and the rival the right, and
+`clamp_player`/`clamp_rival` each clamped to a fixed side. With overlap that is no longer
+true: walk under an occupied tree and you come out on the far side.
+
+The two side-specific clamps are therefore replaced by one side-agnostic
+`clamp_walk(x, other_x, other_y, my_y)` which, in order:
+
+1. clamps to the world, `[WALK_LEFT, WALK_RIGHT]`
+2. clamps to the leash, `[other_x - LEASH, other_x + LEASH]`
+3. applies `MIN_GAP` **only if** `abs(my_y - other_y) < CLIMB_CLEARANCE`, pushing to
+   whichever side of `other_x` it is already nearer
+
+### Landing on someone
+
+When a descending squirrel comes down to within `CLIMB_CLEARANCE` of a grounded one that is
+within `MIN_GAP` horizontally, **the grounded one is shoved aside** to exactly `MIN_GAP`
+away. The descender always lands; nobody gets stuck up a tree.
+
+Two edges this has to survive, both resolved rather than left open:
+
+- **A shove against a world edge.** The shoved squirrel goes to whichever side it is
+  already nearer; if that would put it outside `[WALK_LEFT, WALK_RIGHT]`, it goes to the
+  other side instead. The walkable world is 2600px against a 170px `MIN_GAP`, so there is
+  always room on at least one side.
+- **A shove that would break the leash.** It cannot. The shove leaves the two exactly
+  `MIN_GAP` = 170 apart, which is well inside the 700 leash, so a shove always ends closer
+  than it started.
+
+**The shove only applies to a squirrel that is on the ground.** If the one in the way is
+itself up a trunk, it is not shoved — shoving it sideways would leave it gripping thin air,
+breaking the rule that anything off the ground is at a tree. In that case the descent is
+blocked instead, and the descender waits. Since trees are 500px apart and `MIN_GAP` is 170,
+this only arises when both squirrels are on the same trunk.
 
 ## The rival
 
@@ -118,6 +155,7 @@ suppressed.** Without that it would drift sideways off its trunk and hang in the
 | `CLIMB_SPEED` | 160 px/sec | A little slower than the 220 walking speed; going up should feel like effort. |
 | `RIVAL_CLIMB_SPEED` | 70 px/sec | Slower than the player, matching the existing walk-speed relationship. |
 | `CLIMB_MIN_MS` / `CLIMB_MAX_MS` | 300 / 900 | How long a vertical whim lasts, mirroring the horizontal wander timings. |
+| `CLIMB_CLEARANCE` | 60 | Height difference above which two squirrels stop bumping into each other and can pass. Also the height a descending squirrel must get within before it shoves. |
 
 ## How it fits the code
 
@@ -131,7 +169,11 @@ Positions become `(x, y)` where `y` is height above the ground and 0 is standing
 - `climb(y, direction, dt_ms, speed)` clamps to `[0, MAX_CLIMB]`.
 - `Wander` gains `climb_direction` and `climb_remaining_ms`; `step_wander` returns
   `(x, y, wander)` and suppresses horizontal drift whenever `y > 0`.
-- `camera_x()`, `clamp_player()` and `clamp_rival()` keep taking x only.
+- `clamp_player()` and `clamp_rival()` are **replaced** by one side-agnostic
+  `clamp_walk(x, other_x, other_y, my_y)`, since squirrels can now cross.
+- `shove(grounded_x, lander_x)` returns where a shoved squirrel ends up, handling the
+  world-edge fallback.
+- `camera_x()` keeps taking x only.
 
 Still no pygame.
 
@@ -167,6 +209,13 @@ but it would not have been if we had done backgrounds first.
   not drifting horizontally while off the ground; and an arithmetic test that
   `MAX_CLIMB` + the tallest sprite still fits under `STAGE_TOP`, so the constraint is
   guarded rather than just documented.
+- **`test_arena.py`, overlap and shoving**: squirrels passing each other freely when more
+  than `CLIMB_CLEARANCE` apart vertically and bumping when not; a squirrel ending up on the
+  far side after walking under an occupied tree; `clamp_walk` still honouring the world and
+  the leash in both directions now that sides are not fixed; a shove landing exactly
+  `MIN_GAP` away; a shove against `WALK_LEFT` going the other way instead of leaving the
+  world; and a descent onto a squirrel that is itself climbing being blocked rather than
+  shoving it off its trunk.
 - **`test_sprites.py`**: `load_tree()` returns a surface with no art present.
 - The existing 112 tests must keep passing, with only the `gap`/`band`/`reaches` call sites
   updated for their new signatures.
