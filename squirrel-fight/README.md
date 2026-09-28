@@ -57,6 +57,15 @@ between you first. The rival climbs too, at random, and will happily
 strand itself halfway up a tree with nothing in reach. You can walk underneath it while
 it's up there.
 
+**Jump with Space.** From the ground it's a hop. From up a trunk it's a proper leap — and
+that difference is the whole trick: a ground jump *can't* reach the next tree, but a jump
+from up one can. Steer with Left and Right while you're in the air, and you'll grab the
+next trunk as you come down past it. Miss, and you just land in the dirt — falling never
+hurts. Hold Space and a direction and you'll keep launching off each trunk you catch,
+swinging along the treetops.
+
+The rival jumps too, at random, and is no better at aiming than it is at anything else.
+
 A move that can't reach is dimmed — you can still pick it, but it whiffs for no
 damage. The rival wanders at random rather than cleverly, so it does this to
 itself all the time.
