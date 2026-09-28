@@ -288,9 +288,14 @@ def step_wander(wander, rival_x, rival_y, player_x, player_y, dt_ms, rng=random)
     climb_direction = wander.climb_direction
     climb_remaining = wander.climb_remaining_ms - dt_ms
     if climb_remaining <= 0:
-        # Weighted towards staying on the ground, so it doesn't spend the whole
-        # fight up a tree.
-        climb_direction = rng.choice((-1, 0, 0, 1))
+        # Weighted towards *going down*, which is not the same as being weighted
+        # towards 0. This used to be (-1, 0, 0, 1), which averages zero: height
+        # became an aimless walk between the ground and the treetop, and that
+        # sits at every height equally. The rival clung to a trunk 71% of the
+        # fight — and it can't walk while it's off the ground, so the whole
+        # fight stopped moving. `test_the_rival_does_not_live_up_a_tree` guards
+        # the mean staying negative.
+        climb_direction = rng.choice((-1, -1, -1, -1, -1, -1, 0, 1))
         climb_remaining = rng.randint(CLIMB_MIN_MS, CLIMB_MAX_MS)
 
     y = rival_y

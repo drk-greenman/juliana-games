@@ -468,3 +468,41 @@ def test_the_rival_only_jumps_from_somewhere_it_could():
         arena.Flight(airborne=True, vy=100.0),
         arena.TREES[4], 100.0, arena.PLAYER_START, 0.0, 16, rng=rng)
     assert flight.vy < 100.0, "should have kept falling, not relaunched"
+
+
+def test_the_rival_does_not_live_up_a_tree():
+    """The vertical whim has to pull toward the ground, not merely wobble.
+
+    A whim drawn from a zero-mean set makes the rival's height an aimless walk
+    between two walls, and such a walk sits at every height equally — so the
+    rival ends up clinging to a trunk most of the fight instead of wandering.
+    It cannot walk while it is off the ground, so this stops the whole fight
+    moving. Measured at 71% of the fight off the ground, with single stints of
+    half a minute, before the whim was weighted downwards.
+
+    Stranding itself up a tree is meant to be the joke, not the default state.
+    """
+    import random as real_random
+
+    off_ground = total = 0
+    longest_stint_ms = 0
+    for seed in range(4):
+        real_random.seed(seed)
+        wander, flight = arena.Wander(), arena.Flight()
+        x, y = float(arena.RIVAL_START), 0.0
+        stint_ms = 0
+        for _ in range(60 * 60):            # a minute of play at 60fps
+            x, y, wander, flight = arena.step_rival(
+                wander, flight, x, y, arena.PLAYER_START, 0.0, 16)
+            total += 1
+            if y > 0:
+                off_ground += 1
+                stint_ms += 16
+                longest_stint_ms = max(longest_stint_ms, stint_ms)
+            else:
+                stint_ms = 0
+
+    assert off_ground / total < 0.45, (
+        "rival spent {:.0%} of the fight off the ground".format(off_ground / total))
+    assert longest_stint_ms < 12000, (
+        "rival spent {:.1f}s up a tree in one go".format(longest_stint_ms / 1000))
