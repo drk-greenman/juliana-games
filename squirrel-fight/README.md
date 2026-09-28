@@ -50,8 +50,10 @@ than either one touring it alone.
 trunks. While you're off the ground you can't walk — climb down first, the way a squirrel
 has to let go before it can run.
 
-Height counts as distance, so going up a tree pushes you out of melee range and into
-throwing range without walking anywhere. The rival climbs too, at random, and will happily
+Height counts as distance, so going up a tree usually pushes you out of melee range and
+into throwing range without walking anywhere. Climb straight up from nose to nose, though,
+and you're still close enough to smack each other — you need a step or two of daylight
+between you first. The rival climbs too, at random, and will happily
 strand itself halfway up a tree with nothing in reach. You can walk underneath it while
 it's up there.
 
