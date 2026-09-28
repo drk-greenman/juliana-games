@@ -439,3 +439,30 @@ def test_steering_in_the_air_still_respects_the_world():
     x, _, _ = arena.step_flight(
         flight, arena.WALK_LEFT, 100.0, -1, 16, *out_of_the_way(arena.WALK_LEFT))
     assert x >= arena.WALK_LEFT
+
+
+def test_the_rival_always_ends_up_somewhere_solid():
+    """Over a long wander it may jump, but it must never be left airborne forever."""
+    import random as real_random
+    real_random.seed(7)
+    wander = arena.Wander()
+    flight = arena.Flight()
+    x, y = arena.RIVAL_START, 0.0
+    airborne_run = 0
+    for _ in range(6000):
+        x, y, wander, flight = arena.step_rival(
+            wander, flight, x, y, arena.PLAYER_START, 0.0, 16)
+        assert arena.WALK_LEFT <= x <= arena.WALK_RIGHT
+        assert 0 <= y <= arena.MAX_CLIMB + 200      # a jump arcs above MAX_CLIMB
+        airborne_run = airborne_run + 1 if flight.airborne else 0
+        assert airborne_run < 200, "never came back down"
+
+
+def test_the_rival_only_jumps_from_somewhere_it_could():
+    rng = FakeRandom(choices=[1, 0, 1], ints=[800, 500, 500])
+    # Mid-air already: it must not start another jump.
+    _, _, _, flight = arena.step_rival(
+        arena.Wander(remaining_ms=0, climb_remaining_ms=0, jump_remaining_ms=0),
+        arena.Flight(airborne=True, vy=100.0),
+        arena.TREES[4], 100.0, arena.PLAYER_START, 0.0, 16, rng=rng)
+    assert flight.vy < 100.0, "should have kept falling, not relaunched"

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 # The world is three windows wide. The window stays 960; the camera scrolls.
 WINDOW_WIDTH = 960
@@ -92,6 +92,10 @@ RIVAL_CLIMB_SPEED = 70.0
 # How long one of the rival's vertical whims lasts.
 CLIMB_MIN_MS = 300
 CLIMB_MAX_MS = 900
+
+# How long between the rival considering a jump.
+JUMP_MIN_MS = 700
+JUMP_MAX_MS = 2000
 
 # Jumping. These are coupled to TREE_SPACING and CATCH_REACH: a jump from the ground
 # lands 192px along and a jump from MAX_CLIMB catches the trunk 230px along —
@@ -262,6 +266,7 @@ class Wander:
     remaining_ms: int = 0
     climb_direction: int = 0        # -1 down, 0 staying put, +1 up
     climb_remaining_ms: int = 0
+    jump_remaining_ms: int = 0
 
 
 def step_wander(wander, rival_x, rival_y, player_x, player_y, dt_ms, rng=random) -> tuple:
@@ -299,3 +304,27 @@ def step_wander(wander, rival_x, rival_y, player_x, player_y, dt_ms, rng=random)
             # standing there pushing against it for the rest of the stretch.
             direction = -direction
     return x, y, Wander(direction, remaining, climb_direction, climb_remaining)
+
+
+def step_rival(wander, flight, rival_x, rival_y, player_x, player_y, dt_ms, rng=random):
+    """One frame of everything the rival does. Returns `(x, y, wander, flight)`.
+
+    A jump takes priority: while it is in the air nothing else applies, because
+    it is neither walking nor gripping a trunk.
+    """
+    if flight.airborne:
+        x, y, flight = step_flight(
+            flight, rival_x, rival_y, wander.direction, dt_ms, player_x, player_y)
+        return x, y, wander, flight
+
+    jump_remaining = wander.jump_remaining_ms - dt_ms
+    if jump_remaining <= 0:
+        jump_remaining = rng.randint(JUMP_MIN_MS, JUMP_MAX_MS)
+        # Only worth jumping from up a trunk; a hop off the ground goes nowhere.
+        if rival_y > 0 and rng.choice((True, False)):
+            wander = replace(wander, jump_remaining_ms=jump_remaining)
+            return rival_x, rival_y, wander, launch()
+
+    x, y, wander = step_wander(
+        wander, rival_x, rival_y, player_x, player_y, dt_ms, rng=rng)
+    return x, y, replace(wander, jump_remaining_ms=jump_remaining), flight
