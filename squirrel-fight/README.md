@@ -134,9 +134,20 @@ Three things that catch people out:
 
 Any size works — it's scaled with nearest-neighbour, so pixel art stays sharp.
 
-The world is three screens wide, so your background is **tiled** across it — the same
-picture repeated three times. Something with no strong left or right edge tiles best.
-(Several different scenes, painted to the full world width, is the next thing planned.)
+### More than one place
+
+Name extra scenes `background-<place>.png` — `background-forest.png`,
+`background-snow.png`, `background-burrow.png` — and they're found automatically. Plain
+`background.png` still counts as one.
+
+Each battle deals **three** of them across the world, so walking takes you from one place
+into another, and the next fight deals a different three. With only one scene it looks
+exactly as it always has, so nothing changes until there's a second.
+
+Where two scenes meet there's a join. Nothing blends them, so scenes with darker or busier
+left and right edges butt together most neatly — which the tree-trunk edges of the
+original arena already do. If a seam looks wrong, redraw the edge rather than worrying
+about the code.
 
 ## The borrowed squirrels
 
