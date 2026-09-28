@@ -81,10 +81,13 @@ def test_taking_a_turn_animates_and_comes_back_to_the_menu(game):
 
 
 def test_walking_moves_the_player_and_the_rival_wanders(game):
-    before_player, before_rival = game.player_x, game.rival_x
+    before_player = game.player_x
+    before_rival = (game.rival_x, game.rival_y)
     game.update(16)                    # no keys held: only the rival should move
     assert game.player_x == before_player
-    assert game.rival_x != before_rival
+    # Checked as a pair, not just x: the rival starts at a trunk now, so its
+    # first move may be up the tree rather than along the ground.
+    assert (game.rival_x, game.rival_y) != before_rival
 
 
 def test_squirrels_stay_inside_the_world_over_a_long_idle(game):

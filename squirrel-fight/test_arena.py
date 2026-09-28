@@ -315,7 +315,8 @@ def test_the_rival_climbs_when_it_is_at_a_tree():
 
 def test_the_rival_cannot_climb_in_open_ground():
     rng = FakeRandom(choices=[1, 1], ints=[800, 800])
-    nowhere = arena.TREES[2] + 400          # well away from any trunk
+    # Exactly half a spacing past a trunk is the furthest you can be from one.
+    nowhere = arena.TREES[2] + arena.TREE_SPACING // 2
     _, y, _ = arena.step_wander(arena.Wander(remaining_ms=0, climb_remaining_ms=0),
                                 nowhere, 0.0, nowhere - 400, 0.0, 100, rng=rng)
     assert y == 0
@@ -342,3 +343,18 @@ def test_the_rival_wander_stays_inside_every_limit():
         assert arena.WALK_LEFT <= x <= arena.WALK_RIGHT
         assert 0 <= y <= arena.MAX_CLIMB
         assert abs(x - arena.PLAYER_START) <= arena.LEASH
+
+
+def test_trees_are_spaced_for_jumping():
+    gaps = {arena.TREES[i + 1] - arena.TREES[i] for i in range(len(arena.TREES) - 1)}
+    assert gaps == {arena.TREE_SPACING}
+
+
+def test_both_fighters_start_at_a_trunk():
+    """The spacing divides the 460px opening gap, so neither side starts favoured.
+
+    At a spacing that doesn't divide it, one fighter begins able to climb and the
+    other doesn't — a small unfairness baked into every battle.
+    """
+    assert arena.tree_near(arena.PLAYER_START) is not None
+    assert arena.tree_near(arena.RIVAL_START) is not None

@@ -58,9 +58,13 @@ RIVAL_SPEED = 90.0
 WANDER_MIN_MS = 400
 WANDER_MAX_MS = 1200
 
-# Trunks at fixed spots across the world. The one at 1440 sits between the two
-# opening positions, so there is a tree on screen from the very first turn.
-TREES = (420, 960, 1440, 1980, 2480)
+# Trunks across the world. The spacing is what a jump has to clear, so it is
+# named rather than implied — see JUMP_SPEED and the reach table in the spec.
+#
+# 230 divides the 460px gap the fighters start at, so both of them begin at a
+# trunk. At 290 the player would start at a tree and the rival would not.
+TREE_SPACING = 230
+TREES = tuple(range(290, 2591, TREE_SPACING))
 
 # How near a trunk you have to be to start climbing it.
 CLIMB_REACH = 60
