@@ -34,12 +34,17 @@ not, which is a small unfairness baked into every battle.
 | --- | --- |
 | `JUMP_SPEED` | 380 px/sec upward |
 | `GRAVITY` | 950 px/sec² |
-| `AIR_SPEED` | 280 px/sec sideways, against 220 walking |
+| `AIR_SPEED` | 260 px/sec sideways, against 220 walking |
 
 | Launched from | Hang time | Horizontal reach | |
 | --- | --- | --- | --- |
-| the ground | 0.80s | 224px | **falls short** of the 230px gap |
-| a full climb (240) | 1.22s | 340px | **clears it** |
+| the ground | 0.80s | 208px | **falls short** of the 230px gap by 22px |
+| a full climb (240) | 1.22s | 316px | **clears it** by 86px |
+
+Both figures are from simulating the actual 16ms steps rather than the continuous
+formula. An earlier `AIR_SPEED` of 280 put the ground jump at 224 against a 230 gap — a
+6px margin, too fine to survive discrete stepping, and a rule that fragile is one bad
+frame away from behaving differently than it reads.
 
 That gap between 224 and 230 is deliberate and worth protecting: **you can only leap from
 tree to tree if you jump from up a tree.** A jump from the ground is a hop that doesn't
