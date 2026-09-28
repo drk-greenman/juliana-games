@@ -25,7 +25,10 @@ from battle import Fighter, battle_outcome, resolve_turn
 from choreography import PLAYER, RIVAL, ActorState, build_timeline, sample
 from game import RIVAL_NAMES
 from moves import MOVES
-from sprites import available_squirrels, load_background, load_pose, load_tree, slug
+from sprites import (
+    STAGE_SIZE, available_backgrounds, available_squirrels, load_background,
+    load_pose, load_tree, slug,
+)
 
 WINDOW_SIZE = (960, 840)
 FPS = 60
@@ -90,6 +93,26 @@ def pick_player_art(rival_name):
     return random.choice(others) if others else None
 
 
+# The world is a whole number of screens wide, and each scene covers one screen.
+SCENE_SLOTS = arena.WORLD_WIDTH // STAGE_SIZE[0]
+
+
+def pick_scenes(count=SCENE_SLOTS):
+    """Deal `count` scenes for the world, in the order they'll be walked past.
+
+    Sampled without replacement where there is enough art, so a battle takes you
+    through different places rather than the same one repeatedly. With fewer
+    scenes than slots it repeats to fill, and with exactly one it behaves the way
+    a single tiled background always did.
+    """
+    scenes = available_backgrounds()
+    if not scenes:
+        return []
+    if len(scenes) >= count:
+        return random.sample(scenes, count)
+    return [random.choice(scenes) for _ in range(count)]
+
+
 class Button:
     def __init__(self, rect, move, number):
         self.rect = rect
@@ -136,6 +159,7 @@ class Game:
         self.player_flight = arena.Flight()
         self.rival_flight = arena.Flight()
         self.wander = arena.Wander()
+        self.scenes = pick_scenes()
 
     # ----- state changes -------------------------------------------------
 
@@ -161,6 +185,7 @@ class Game:
         self.player_flight = arena.Flight()
         self.rival_flight = arena.Flight()
         self.wander = arena.Wander()
+        self.scenes = pick_scenes()
         self.state = "battle"
 
     # ----- input ---------------------------------------------------------
@@ -373,15 +398,16 @@ class Game:
                          (0, STAGE_TOP, WINDOW_SIZE[0], GROUND_Y - STAGE_TOP))
         pygame.draw.rect(self.screen, COLOR_GRASS,
                          (0, GROUND_Y, WINDOW_SIZE[0], STAGE_BOTTOM - GROUND_Y))
-        background = load_background()
-        if background is not None:
-            # One screen of scenery repeated across a world several screens wide.
-            # A tiled frame repeats its edges, which reads as a continuous burrow
-            # wall — good enough until there is proper wide scenery to draw.
-            tile_width = background.get_width()
+        if self.scenes:
+            # One scene per screen-width slot, so walking the world takes you
+            # from one place into another instead of past the same picture.
+            tile_width = STAGE_SIZE[0]
             left = int(camera // tile_width) * tile_width
             while left < camera + WINDOW_SIZE[0]:
-                self.screen.blit(background, (left - camera, STAGE_TOP))
+                slot = int(left // tile_width) % len(self.scenes)
+                scene = load_background(self.scenes[slot])
+                if scene is not None:
+                    self.screen.blit(scene, (left - camera, STAGE_TOP))
                 left += tile_width
 
         # Trunks go down before the squirrels, so a climbing squirrel reads as

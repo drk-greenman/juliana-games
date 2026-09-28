@@ -187,3 +187,28 @@ def test_a_long_idle_always_leaves_both_squirrels_solid(game):
         game.update(16)
     assert 0 <= game.player_y <= arena.MAX_CLIMB + 80
     assert 0 <= game.rival_y <= arena.MAX_CLIMB + 80
+
+
+def test_a_battle_deals_a_scene_for_every_slot(game):
+    assert len(game.scenes) == visual_game.SCENE_SLOTS
+
+
+def test_drawing_works_with_several_scenes(game, monkeypatch):
+    # Patch the name ON visual_game, not on sprites: visual_game does
+    # `from sprites import available_backgrounds`, so it holds its own
+    # reference and patching sprites would quietly do nothing.
+    #
+    # Three names, only one of which is a file that exists: the other two load
+    # as None, which the draw path has to survive rather than crash on.
+    monkeypatch.setattr(visual_game, "available_backgrounds",
+                        lambda: ["background", "background-nowhere", "background-else"])
+    game.scenes = visual_game.pick_scenes()
+    assert len(game.scenes) == visual_game.SCENE_SLOTS
+    game.draw()
+
+
+def test_drawing_works_with_no_scenes_at_all(game, monkeypatch):
+    monkeypatch.setattr(visual_game, "available_backgrounds", lambda: [])
+    game.scenes = visual_game.pick_scenes()
+    assert game.scenes == []
+    game.draw()
