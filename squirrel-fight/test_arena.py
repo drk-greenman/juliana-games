@@ -358,3 +358,84 @@ def test_both_fighters_start_at_a_trunk():
     """
     assert arena.tree_near(arena.PLAYER_START) is not None
     assert arena.tree_near(arena.RIVAL_START) is not None
+
+
+def out_of_the_way(x):
+    """Somewhere the other squirrel can sit without affecting this one.
+
+    NOT a huge x: `clamp_walk` applies the leash, so a far-off "other" would drag
+    the jumper across the world to stay within 700px of it. Same x and a height
+    nothing can reach is what actually means "ignore the other squirrel".
+    """
+    return x, 99999.0
+
+
+def fly_until_settled(x, y, direction, limit=400):
+    """Run a jump to its end. Returns (x, y, flight, steps)."""
+    other_x, other_y = out_of_the_way(x)
+    flight = arena.launch()
+    steps = 0
+    while flight.airborne and steps < limit:
+        x, y, flight = arena.step_flight(flight, x, y, direction, 16, other_x, other_y)
+        steps += 1
+    assert steps < limit, "a jump should always end"
+    return x, y, flight, steps
+
+
+def test_launching_leaves_the_ground():
+    flight = arena.launch()
+    assert flight.airborne is True
+    assert flight.vy > 0
+
+
+def test_a_jump_comes_back_down_and_lands_flat():
+    # Straight up from between two trunks, so nothing is caught on the way down.
+    between = arena.TREES[4] + arena.TREE_SPACING // 2
+    _, y, flight, _ = fly_until_settled(float(between), 0.0, 0)
+    assert y == 0.0
+    assert flight.airborne is False
+    assert flight.vy == 0.0
+
+
+def test_a_ground_jump_does_not_reach_the_next_tree():
+    """The design rule, guarded, in terms of what actually happens.
+
+    Asserted as "lands in the dirt" rather than a raw distance, because the catch
+    radius adds itself to a jump's effective reach — measuring distance alone
+    once hid a ground jump that was grabbing the next trunk anyway.
+    """
+    start = arena.TREES[4]
+    x, y, flight, _ = fly_until_settled(float(start), 0.0, 1)
+    assert y == 0.0, "should have landed on the ground, not caught a trunk"
+    assert not flight.airborne
+    assert x < start + arena.TREE_SPACING
+
+
+def test_a_jump_from_up_a_tree_catches_the_next_one():
+    start = arena.TREES[4]
+    x, y, flight, _ = fly_until_settled(float(start), float(arena.MAX_CLIMB), 1)
+    assert y > 0, "should have caught the next trunk, not landed"
+    assert not flight.airborne
+    assert arena.tree_near(x, arena.CATCH_REACH) == start + arena.TREE_SPACING
+
+
+def test_a_descending_squirrel_catches_a_trunk():
+    trunk = arena.TREES[4]
+    flight = arena.Flight(airborne=True, vy=-100.0)      # falling
+    _, y, after = arena.step_flight(flight, trunk, 120.0, 0, 16, *out_of_the_way(trunk))
+    assert after.airborne is False, "should have grabbed the trunk"
+    assert y > 0, "and stayed up it"
+
+
+def test_an_ascending_squirrel_does_not_catch_the_trunk_it_left():
+    trunk = arena.TREES[4]
+    flight = arena.Flight(airborne=True, vy=300.0)       # still rising
+    _, _, after = arena.step_flight(flight, trunk, 120.0, 0, 16, *out_of_the_way(trunk))
+    assert after.airborne is True, "would never be able to leave a tree otherwise"
+
+
+def test_steering_in_the_air_still_respects_the_world():
+    flight = arena.Flight(airborne=True, vy=0.0)
+    x, _, _ = arena.step_flight(
+        flight, arena.WALK_LEFT, 100.0, -1, 16, *out_of_the_way(arena.WALK_LEFT))
+    assert x >= arena.WALK_LEFT

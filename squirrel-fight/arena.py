@@ -22,8 +22,8 @@ WORLD_WIDTH = 2880
 WALK_LEFT = 140
 WALK_RIGHT = WORLD_WIDTH - 140
 
-# Squirrels bump into each other rather than overlapping. Because neither can
-# cross the other, the player is always the left fighter and the rival the right.
+# How close two squirrels at similar heights may get. They can pass each other
+# when one is up a tree, so neither is permanently the left or the right fighter.
 MIN_GAP = 170
 
 # Neither squirrel may get further than this from the other. At this gap each one
@@ -69,6 +69,13 @@ TREES = tuple(range(290, 2591, TREE_SPACING))
 # How near a trunk you have to be to start climbing it.
 CLIMB_REACH = 60
 
+# How near you have to pass to grab a trunk in mid-air. Tighter than CLIMB_REACH
+# because snatching a branch as you fly past is a finer thing than standing next
+# to a tree and starting up it — and because a generous catch radius quietly adds
+# itself to every jump's reach, which is what broke the tree-to-tree rule the
+# first time these numbers were picked.
+CATCH_REACH = 20
+
 # How high a squirrel can get. NOT a tuning knob: feet plant at GROUND_Y + 10 =
 # 526, and the tallest drawing is 184px, so at 240 its head is at y=102 against a
 # stage ceiling of 92. Ten pixels of margin. Raise this and ears leave the stage.
@@ -85,6 +92,19 @@ RIVAL_CLIMB_SPEED = 70.0
 # How long one of the rival's vertical whims lasts.
 CLIMB_MIN_MS = 300
 CLIMB_MAX_MS = 900
+
+# Jumping. These are coupled to TREE_SPACING and CATCH_REACH: a jump from the ground
+# lands 192px along and a jump from MAX_CLIMB catches the trunk 230px along —
+# so you can only leap tree to tree if you launch from up a tree.
+#
+# CATCH_REACH is part of this arithmetic, not separate from it: a catch radius
+# adds itself to every jump's effective reach, and at 60 a ground jump grabbed
+# the next trunk and broke the rule entirely. Changing any of the four means
+# rechecking the other three.
+# `test_a_ground_jump_does_not_reach_the_next_tree` guards the rule.
+JUMP_SPEED = 380.0
+GRAVITY = 950.0
+AIR_SPEED = 240.0
 
 
 def gap(player_x, player_y, rival_x, rival_y) -> float:
@@ -184,10 +204,10 @@ def resolve_overlap(player_x, player_y, rival_x, rival_y) -> tuple:
     return player_x, player_y, shove(rival_x, player_x), rival_y
 
 
-def tree_near(x):
-    """The trunk close enough to climb from `x`, or None."""
+def tree_near(x, reach=CLIMB_REACH):
+    """The trunk within `reach` of `x`, or None."""
     for trunk in TREES:
-        if abs(x - trunk) <= CLIMB_REACH:
+        if abs(x - trunk) <= reach:
             return trunk
     return None
 
@@ -195,6 +215,43 @@ def tree_near(x):
 def climb(y, direction, dt_ms, speed=CLIMB_SPEED) -> float:
     """Move up (+1) or down (-1) a trunk, stopping at the ground and the ceiling."""
     return max(0.0, min(MAX_CLIMB, y + direction * speed * (dt_ms / 1000.0)))
+
+
+@dataclass(frozen=True)
+class Flight:
+    """Whether a squirrel is in the air, and how fast it is rising."""
+
+    airborne: bool = False
+    vy: float = 0.0
+
+
+def launch() -> Flight:
+    """Push off. Gravity takes over from here until something is caught."""
+    return Flight(airborne=True, vy=JUMP_SPEED)
+
+
+def step_flight(flight, x, y, direction, dt_ms, other_x, other_y) -> tuple:
+    """Advance a jump by `dt_ms`. Returns `(x, y, flight)`.
+
+    Gravity only ever applies to a squirrel that jumped — on a trunk it is
+    gripping, and stays put. So this is a no-op for anyone not airborne.
+    """
+    if not flight.airborne:
+        return x, y, flight
+
+    seconds = dt_ms / 1000.0
+    vy = flight.vy - GRAVITY * seconds
+    y = y + vy * seconds
+    x = clamp_walk(x + direction * AIR_SPEED * seconds, y, other_x, other_y)
+
+    if y <= 0:
+        return x, 0.0, Flight()
+    if vy < 0 and tree_near(x, CATCH_REACH) is not None:
+        # Caught a trunk on the way down. Only when descending: on the way up a
+        # squirrel is still next to the tree it just left, and would re-grab it
+        # instantly and never get anywhere.
+        return x, y, Flight()
+    return x, y, Flight(airborne=True, vy=vy)
 
 
 @dataclass(frozen=True)
