@@ -73,3 +73,30 @@ def test_only_squirrels_are_offered_as_fighters(tmp_path, monkeypatch):
     monkeypatch.setattr(sprites, "ASSETS_DIR", tmp_path)
 
     assert sprites.available_squirrels() == {"john-cena", "big-bumboy"}
+
+
+def test_available_backgrounds_finds_every_scene(tmp_path, monkeypatch):
+    import sprites
+
+    for name in ("background.png", "background-forest.png", "background-snow.png",
+                 "john-cena.png", "tree.png"):
+        (tmp_path / name).touch()
+    monkeypatch.setattr(sprites, "ASSETS_DIR", tmp_path)
+
+    assert sprites.available_backgrounds() == [
+        "background", "background-forest", "background-snow"]
+
+
+def test_available_backgrounds_copes_with_no_art(tmp_path, monkeypatch):
+    import sprites
+
+    monkeypatch.setattr(sprites, "ASSETS_DIR", tmp_path)
+    assert sprites.available_backgrounds() == []
+
+
+def test_a_missing_scene_loads_as_nothing(tmp_path, monkeypatch):
+    import sprites
+
+    monkeypatch.setattr(sprites, "ASSETS_DIR", tmp_path)
+    sprites.clear_cache()
+    assert sprites.load_background("background-nowhere") is None

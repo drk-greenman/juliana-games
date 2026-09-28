@@ -121,14 +121,31 @@ def available_squirrels() -> set:
     return found
 
 
-def load_background() -> pygame.Surface | None:
-    """Return `assets/background.png` scaled to the stage, or None if absent.
+def available_backgrounds() -> list:
+    """The stems of every scene drawing in `assets/`, in a stable order.
+
+    A scene is `background.png` or any `background-<place>.png`. Sorted rather
+    than a set so that a given pick is reproducible for a given seed.
+    """
+    if not ASSETS_DIR.is_dir():
+        return []
+    found = [
+        path.stem for path in ASSETS_DIR.glob("*.png")
+        if path.stem == "background" or path.stem.startswith("background-")
+    ]
+    # Sorted by stem rather than by filename: globbing sorts "background-x.png"
+    # before "background.png", because "-" sorts before ".".
+    return sorted(found)
+
+
+def load_background(stem: str = "background") -> pygame.Surface | None:
+    """Return one scene scaled to the stage, or None if it isn't there.
 
     None means "nothing drawn yet", which the caller answers with its own sky
     and grass — so this is the one loader with no placeholder of its own.
     """
-    if "background" not in _background_cache:
-        path = ASSETS_DIR / "background.png"
+    if stem not in _background_cache:
+        path = ASSETS_DIR / "{}.png".format(stem)
         surface = None
         if path.is_file():
             try:
@@ -142,8 +159,8 @@ def load_background() -> pygame.Surface | None:
                     surface.set_colorkey(BACKGROUND_KEY_COLOR)
             except (pygame.error, OSError):
                 surface = None
-        _background_cache["background"] = surface
-    return _background_cache["background"]
+        _background_cache[stem] = surface
+    return _background_cache[stem]
 
 
 # How big a trunk is drawn on the stage: wide enough to read as a tree, tall
