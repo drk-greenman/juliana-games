@@ -55,3 +55,21 @@ def test_a_tree_is_always_available_even_with_no_drawing():
     tree = sprites.load_tree()
     assert tree.get_width() > 0
     assert tree.get_height() > 0
+
+
+def test_only_squirrels_are_offered_as_fighters(tmp_path, monkeypatch):
+    """Non-squirrel art must never be dealt as a fighter.
+
+    `tree.png` really was offered before this test existed — a drawn tree would
+    have turned up in a duel as the player's borrowed squirrel. When a new kind
+    of asset is added, reserve it here and this test will say so.
+    """
+    import sprites
+
+    for name in ("john-cena.png", "big-bumboy.png", "background.png",
+                 "background-forest.png", "tree.png",
+                 "player_idle.png", "john-cena_hurt.png"):
+        (tmp_path / name).touch()
+    monkeypatch.setattr(sprites, "ASSETS_DIR", tmp_path)
+
+    assert sprites.available_squirrels() == {"john-cena", "big-bumboy"}

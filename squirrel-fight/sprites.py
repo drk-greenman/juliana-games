@@ -40,10 +40,12 @@ BACKGROUND_KEY_COLOR = (255, 255, 255)
 # — including visual_game's "flip the rival" — stays as it was.
 ART_FACES_RIGHT = False
 
-# Reserved stems in assets/ that name something other than an individual
-# squirrel, so `available_squirrels()` doesn't offer them as fighters.
-RESERVED_STEMS = {"background"}
-GENERIC_PREFIXES = ("player_", "rival_")
+# Stems in `assets/` that name something other than an individual squirrel, so
+# `available_squirrels()` doesn't offer them as fighters. Anything new that is
+# art but not a squirrel belongs here — `tree.png` was missed once already, and
+# a drawn tree would have turned up in a duel.
+RESERVED_STEMS = {"background", "tree"}
+RESERVED_PREFIXES = ("player_", "rival_", "background-")
 
 # Body colours for the code-drawn stand-in squirrels, so the two fighters are
 # still tellable apart before any real art exists.
@@ -103,16 +105,17 @@ def load_pose(side: str, pose: str, name: str | None = None) -> pygame.Surface:
 def available_squirrels() -> set:
     """The stems of every individual squirrel drawing in `assets/`.
 
-    Skips the background and the generic `player_*`/`rival_*` art, and skips
-    pose files like `john-cena_hurt.png` — a squirrel is offered here only if it
-    has a plain `<name>.png` to stand around in.
+    Skips anything reserved — backgrounds, the tree, and the generic
+    `player_*`/`rival_*` art — and skips pose files like `john-cena_hurt.png`. A
+    squirrel is offered here only if it has a plain `<name>.png` to stand
+    around in.
     """
     found = set()
     if not ASSETS_DIR.is_dir():
         return found
     for path in ASSETS_DIR.glob("*.png"):
         stem = path.stem
-        if stem in RESERVED_STEMS or stem.startswith(GENERIC_PREFIXES) or "_" in stem:
+        if stem in RESERVED_STEMS or stem.startswith(RESERVED_PREFIXES) or "_" in stem:
             continue
         found.add(stem)
     return found
