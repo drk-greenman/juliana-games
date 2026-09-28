@@ -76,11 +76,15 @@ CLIMB_REACH = 60
 # first time these numbers were picked.
 CATCH_REACH = 20
 
-# How high a squirrel can get. NOT a tuning knob: feet plant at GROUND_Y + 10 =
-# 526, and the tallest drawing is 184px, so at 240 its head is at y=102 against a
-# stage ceiling of 92. Ten pixels of margin. Raise this and ears leave the stage.
-# `test_a_fully_climbed_squirrel_still_fits_on_the_stage` guards it.
-MAX_CLIMB = 240
+# How high a squirrel can climb. NOT a tuning knob — it is set by the stage
+# ceiling, and the thing that has to fit under it is the JUMP APEX, not this.
+#
+# A jump rises JUMP_SPEED^2 / 2*GRAVITY = 76px above wherever it launched, so the
+# highest a squirrel ever gets is MAX_CLIMB + 76 = 240, which is exactly where the
+# tallest drawing's head meets the top of the stage. This was 240 while climbing
+# was the only way up; jumping quietly went 76px higher and clipped heads off.
+# `test_a_jumping_squirrel_still_fits_on_the_stage` guards it.
+MAX_CLIMB = 164
 
 # Height difference above which two squirrels stop bumping into each other, so
 # one can walk underneath another that is up a tree.

@@ -153,5 +153,37 @@ def test_squirrels_never_end_up_inside_each_other(game):
         same_height = abs(game.player_y - game.rival_y) < arena.CLIMB_CLEARANCE
         if same_height:
             assert abs(game.player_x - game.rival_x) >= arena.MIN_GAP - 1
-        assert 0 <= game.player_y <= arena.MAX_CLIMB
-        assert 0 <= game.rival_y <= arena.MAX_CLIMB
+        # A jump arcs above MAX_CLIMB, so the bound is the apex, not the climb.
+        assert 0 <= game.player_y <= arena.MAX_CLIMB + 80
+        assert 0 <= game.rival_y <= arena.MAX_CLIMB + 80
+
+
+def test_a_mid_air_squirrel_draws(game):
+    game.player_x = arena.TREES[4]
+    game.player_y = 150.0
+    game.player_flight = arena.Flight(airborne=True, vy=100.0)
+    game.draw()
+
+
+def test_a_turn_can_be_taken_mid_air_and_the_fall_resumes(game):
+    game.player_x = arena.TREES[4]
+    game.player_y = 150.0
+    game.player_flight = arena.Flight(airborne=True, vy=-100.0)
+    game.take_turn(MOVES[0])
+    assert game.state == "animating"
+    height_during = game.player_y
+    run_out_the_animation(game)
+    # Movement is frozen while an animation plays, so it hung there.
+    assert game.player_y == height_during
+    for _ in range(300):
+        game.update(16)
+        if not game.player_flight.airborne:
+            break
+    assert not game.player_flight.airborne, "should have landed or caught a trunk"
+
+
+def test_a_long_idle_always_leaves_both_squirrels_solid(game):
+    for _ in range(4000):
+        game.update(16)
+    assert 0 <= game.player_y <= arena.MAX_CLIMB + 80
+    assert 0 <= game.rival_y <= arena.MAX_CLIMB + 80

@@ -236,16 +236,18 @@ def test_climbing_stops_at_the_ground_and_the_ceiling():
     assert arena.climb(arena.MAX_CLIMB - 10, 1, 1000, speed=160.0) == arena.MAX_CLIMB
 
 
-def test_a_fully_climbed_squirrel_still_fits_on_the_stage():
-    """MAX_CLIMB is forced by the stage ceiling, not chosen. Guard it.
+def test_a_jumping_squirrel_still_fits_on_the_stage():
+    """The ceiling constrains the jump APEX, not the climb height.
 
-    If squirrel art ever gets taller this fails, which is the point — otherwise
-    the tallest squirrel's ears quietly leave the top of the stage.
+    Guarded because this broke once: MAX_CLIMB was set so a *climbing* squirrel
+    fitted, then jumping arrived and rose another 76px, clipping heads off the
+    top of the stage. Fails if art gets taller or the jump gets stronger.
     """
     import visual_game
 
     tallest_sprite = 184          # Big Bumboy, the tallest drawing in assets/
-    feet = visual_game.GROUND_Y + 10 - arena.MAX_CLIMB
+    apex = arena.MAX_CLIMB + arena.JUMP_SPEED ** 2 / (2 * arena.GRAVITY)
+    feet = visual_game.GROUND_Y + 10 - apex
     assert feet - tallest_sprite >= visual_game.STAGE_TOP
 
 

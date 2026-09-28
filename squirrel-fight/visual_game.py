@@ -133,6 +133,8 @@ class Game:
         self.rival_x = arena.RIVAL_START
         self.player_y = 0.0
         self.rival_y = 0.0
+        self.player_flight = arena.Flight()
+        self.rival_flight = arena.Flight()
         self.wander = arena.Wander()
 
     # ----- state changes -------------------------------------------------
@@ -156,6 +158,8 @@ class Game:
         self.rival_x = arena.RIVAL_START
         self.player_y = 0.0
         self.rival_y = 0.0
+        self.player_flight = arena.Flight()
+        self.rival_flight = arena.Flight()
         self.wander = arena.Wander()
         self.state = "battle"
 
@@ -242,35 +246,46 @@ class Game:
     def _walk(self, dt_ms):
         """Move both squirrels while the player is choosing a move.
 
-        Arrow keys are read as held state rather than as KEYDOWN events, because
-        walking has to continue for as long as the key is down. The rival ambles
-        the whole time too, so the gap keeps changing and the player has to
-        commit at a moment when their move will actually reach.
+        Three modes, and a squirrel is always in exactly one: airborne steers
+        through the air, gripping climbs a trunk, grounded walks about. Keys are
+        read as held state rather than KEYDOWN events so movement continues for
+        as long as a key is down.
         """
         keys = pygame.key.get_pressed()
-
-        climbing = 0
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            climbing += 1
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            climbing -= 1
-        if climbing and (arena.tree_near(self.player_x) is not None or self.player_y > 0):
-            self.player_y = arena.climb(self.player_y, climbing, dt_ms)
 
         direction = 0
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             direction -= 1
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             direction += 1
-        # Off the ground the squirrel is gripping a trunk, so it can only go up
-        # and down. Climb down to walk.
-        if direction and self.player_y <= 0:
-            self.player_x = arena.walk(
-                self.player_x, self.player_y, direction, dt_ms, self.rival_x, self.rival_y)
 
-        self.rival_x, self.rival_y, self.wander = arena.step_wander(
-            self.wander, self.rival_x, self.rival_y, self.player_x, self.player_y, dt_ms
-        )
+        if self.player_flight.airborne:
+            # In the air: steer, and let gravity do the rest.
+            self.player_x, self.player_y, self.player_flight = arena.step_flight(
+                self.player_flight, self.player_x, self.player_y, direction, dt_ms,
+                self.rival_x, self.rival_y)
+        else:
+            at_tree = arena.tree_near(self.player_x) is not None
+            if keys[pygame.K_SPACE] and (at_tree or self.player_y <= 0):
+                self.player_flight = arena.launch()
+            else:
+                climbing = 0
+                if keys[pygame.K_UP] or keys[pygame.K_w]:
+                    climbing += 1
+                if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+                    climbing -= 1
+                if climbing and (at_tree or self.player_y > 0):
+                    self.player_y = arena.climb(self.player_y, climbing, dt_ms)
+                # Off the ground the squirrel is gripping a trunk, so it can only
+                # go up and down. Climb down, or jump, to move sideways.
+                elif direction and self.player_y <= 0:
+                    self.player_x = arena.walk(
+                        self.player_x, self.player_y, direction, dt_ms,
+                        self.rival_x, self.rival_y)
+
+        self.rival_x, self.rival_y, self.wander, self.rival_flight = arena.step_rival(
+            self.wander, self.rival_flight, self.rival_x, self.rival_y,
+            self.player_x, self.player_y, dt_ms)
 
         # Only vertical movement can put two squirrels in the same place.
         (self.player_x, self.player_y,
