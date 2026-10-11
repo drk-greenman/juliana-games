@@ -136,6 +136,10 @@ Any size works — it's scaled with nearest-neighbour, so pixel art stays sharp.
 
 ### More than one place
 
+There are two scenes so far: the original `background.png`, and an autumn forest
+borrowed from Luis Zuno (CC0 — see `source-art/CREDITS.md`). The trunks you climb are
+cut from that same forest art, so they match it.
+
 Name extra scenes `background-<place>.png` — `background-forest.png`,
 `background-snow.png`, `background-burrow.png` — and they're found automatically. Plain
 `background.png` still counts as one.

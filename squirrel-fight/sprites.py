@@ -163,9 +163,10 @@ def load_background(stem: str = "background") -> pygame.Surface | None:
     return _background_cache[stem]
 
 
-# How big a trunk is drawn on the stage: wide enough to read as a tree, tall
-# enough to reach above the highest a squirrel can climb.
-TREE_SIZE = (60, 300)
+# How big a trunk is drawn on the stage. Tall enough to reach above the highest
+# a squirrel can climb, and 90 wide because that is the natural 0.3 ratio of the
+# borrowed trunk art — scaling it narrower would stretch the bark.
+TREE_SIZE = (90, 300)
 
 # Bark colours for the code-drawn stand-in trunk.
 TREE_COLORS = ((104, 72, 44), (78, 52, 30))
