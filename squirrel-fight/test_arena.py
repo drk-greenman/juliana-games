@@ -384,6 +384,21 @@ def fly_until_settled(x, y, direction, limit=400):
     return x, y, flight, steps
 
 
+def trunk_with_a_neighbour_to_the_right():
+    """A trunk that has another trunk exactly TREE_SPACING to its right.
+
+    The jump-reach tests need "a trunk and the next one along". An index into
+    TREES only supplies that by accident: with trunks in copses, TREES[4] is a
+    copse edge, and the nearest trunk to its right is a whole clearing away.
+    Asking for the condition directly keeps these tests about jumping rather
+    than about where the trees happen to be this week.
+    """
+    for trunk in arena.TREES:
+        if trunk + arena.TREE_SPACING in arena.TREES:
+            return trunk
+    raise AssertionError("no two trunks are a jump apart — check TREE_SPACING")
+
+
 def test_launching_leaves_the_ground():
     flight = arena.launch()
     assert flight.airborne is True
@@ -392,7 +407,7 @@ def test_launching_leaves_the_ground():
 
 def test_a_jump_comes_back_down_and_lands_flat():
     # Straight up from between two trunks, so nothing is caught on the way down.
-    between = arena.TREES[4] + arena.TREE_SPACING // 2
+    between = trunk_with_a_neighbour_to_the_right() + arena.TREE_SPACING // 2
     _, y, flight, _ = fly_until_settled(float(between), 0.0, 0)
     assert y == 0.0
     assert flight.airborne is False
@@ -406,7 +421,7 @@ def test_a_ground_jump_does_not_reach_the_next_tree():
     radius adds itself to a jump's effective reach — measuring distance alone
     once hid a ground jump that was grabbing the next trunk anyway.
     """
-    start = arena.TREES[4]
+    start = trunk_with_a_neighbour_to_the_right()
     x, y, flight, _ = fly_until_settled(float(start), 0.0, 1)
     assert y == 0.0, "should have landed on the ground, not caught a trunk"
     assert not flight.airborne
@@ -414,7 +429,7 @@ def test_a_ground_jump_does_not_reach_the_next_tree():
 
 
 def test_a_jump_from_up_a_tree_catches_the_next_one():
-    start = arena.TREES[4]
+    start = trunk_with_a_neighbour_to_the_right()
     x, y, flight, _ = fly_until_settled(float(start), float(arena.MAX_CLIMB), 1)
     assert y > 0, "should have caught the next trunk, not landed"
     assert not flight.airborne
