@@ -60,10 +60,31 @@ live together at the top of `arena.py`.
 | Does "drops well short" ever actually come up? | `LONG_RANGE` |
 | Is 11 trees too many — "walk to a tree" stopped being a decision | `TREE_SPACING` |
 
-**This loop already works.** The one piece of real play feedback so far — *"the rival keeps
-getting stuck on trees"* — found a bug worse than any of the above: its vertical whim
-averaged zero, so it clung to a trunk 71% of the fight and, being unable to walk while off
-the ground, stopped the fight dead. Fixed in `fc712f5`. That was not findable by reasoning.
+**This loop already works.** Three rounds of it so far, none of them findable by reasoning:
+
+1. *"The rival keeps getting stuck on trees."* Its vertical whim averaged zero, so height
+   was an aimless walk that sits at every height equally: it clung to a trunk 71% of the
+   fight and, unable to walk while off the ground, stopped the fight dead. Fixed in
+   `fc712f5` by weighting the whim downwards.
+2. *"The rival didn't jump very much or really climb at all."* That fix overshot. Pulled
+   down hard, the walk never commits — it bobbed at the foot of trunks, 1.6% of the fight
+   above 120px, and jumps (which can only launch from up a trunk) halved. Fixed in
+   `1a6f78a`: the whim now depends on where the rival is, so a climb is a committed run.
+   **One weighted draw cannot mean both "come down" and "go all the way up".**
+3. *"I climbed a tree and jumped at the top and flew off the map."* Catching a trunk
+   mid-air returned the catch height uncapped, so chained jumps each launched from the
+   last one's apex and ratcheted ~73px higher forever — 3531px against a 240px budget.
+   Fixed in `b6ff85b` by capping a grip at `MAX_CLIMB`.
+
+Findings 1 and 2 are opposite failures of the same knob, and the two tests that bracket
+them (`test_the_rival_does_not_live_up_a_tree`, `test_the_rival_really_climbs_when_it_climbs`)
+are deliberately in tension — a plain random walk cannot satisfy both. If you are tuning
+`GROUND_WHIMS`/`TRUNK_WHIMS`, run both and expect to be squeezed.
+
+Note what finding 1's test got wrong: it guarded the *share* of time off the ground, which
+stopped meaning "stuck" the moment jumping existed — a rival climbing, perching, leaping
+and descending is off the ground half the time while never standing still. Guarding that
+share is what caused finding 2. It now guards the longest stint and distance travelled.
 
 ## Traps, learned the hard way
 
