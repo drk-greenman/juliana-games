@@ -506,3 +506,32 @@ def test_the_rival_does_not_live_up_a_tree():
         "rival spent {:.0%} of the fight off the ground".format(off_ground / total))
     assert longest_stint_ms < 12000, (
         "rival spent {:.1f}s up a tree in one go".format(longest_stint_ms / 1000))
+
+
+def test_chained_jumps_cannot_ratchet_a_squirrel_off_the_top():
+    """Catching a trunk must never leave you gripping above `MAX_CLIMB`.
+
+    Reported from play: "I climbed a tree and jumped at the top and flew off
+    the map." A catch returned whatever height it happened at, so each jump in
+    a chain launched about 73px higher than the last and the squirrel ratcheted
+    out of the world — peaking at 3531px against a stage budget of 240.
+
+    `MAX_CLIMB` is what makes the whole ceiling sum work: a launch from there
+    apexes at exactly the stage ceiling, so a launch from any higher cannot fit.
+    """
+    ceiling = arena.MAX_CLIMB + arena.JUMP_SPEED ** 2 / (2 * arena.GRAVITY)
+    x, y = float(arena.TREES[3]), float(arena.MAX_CLIMB)
+    flight = arena.launch()
+    peak = y
+    for _ in range(2000):
+        x, y, flight = arena.step_flight(
+            flight, x, y, 1, 16, float(arena.TREES[0]), 0.0)
+        peak = max(peak, y)
+        if not flight.airborne and y > 0:
+            assert y <= arena.MAX_CLIMB, (
+                "caught a trunk at {:.0f}px, above MAX_CLIMB of {}".format(
+                    y, arena.MAX_CLIMB))
+            flight = arena.launch()          # as holding Space does
+
+    assert peak <= ceiling + 1, (
+        "reached {:.0f}px against a ceiling of {:.0f}".format(peak, ceiling))

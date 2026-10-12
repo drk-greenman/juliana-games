@@ -258,7 +258,14 @@ def step_flight(flight, x, y, direction, dt_ms, other_x, other_y) -> tuple:
         # Caught a trunk on the way down. Only when descending: on the way up a
         # squirrel is still next to the tree it just left, and would re-grab it
         # instantly and never get anywhere.
-        return x, y, Flight()
+        #
+        # The grip is capped at MAX_CLIMB because that is as high as a trunk can
+        # be held, and the whole ceiling sum depends on it: a launch from
+        # MAX_CLIMB apexes exactly at the stage ceiling. Returning the raw catch
+        # height let a chained jump launch from its own apex, so each jump went
+        # ~73px higher than the last and the squirrel ratcheted out of the world
+        # — "I climbed a tree and jumped at the top and flew off the map".
+        return x, min(y, float(MAX_CLIMB)), Flight()
     return x, y, Flight(airborne=True, vy=vy)
 
 
