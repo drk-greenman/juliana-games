@@ -4,8 +4,10 @@ Replaces the eleven evenly-spaced trees with seven trees in three copses, separa
 clearings too wide for any jump to cross. Nothing about jumping, climbing or the range
 bands changes; the only production edit is how `TREES` is built.
 
-This is the first change driven by **play feedback rather than reasoning**. It closes the
-last of the six open questions listed in `docs/HANDOFF.md`.
+It closes the last of the six open questions listed in `docs/HANDOFF.md`. The same play
+session also produced three bug reports, fixed separately in `fc712f5`, `1a6f78a` and
+`b6ff85b` and recorded in the handoff — this is the *tuning* half of that feedback, and it
+has to live alongside those fixes rather than in front of them.
 
 ## Why
 
@@ -65,8 +67,8 @@ Breaking the uniformity is free. The jump rules care only about the distance bet
 
 ## The design
 
-Seven trees in three copses. Within a copse, trunks are `TREE_SPACING` apart exactly as
-before. Between copses there is a clearing of `3 * TREE_SPACING`.
+Seven trees: two copses and a lone tree. Within a copse, trunks are `TREE_SPACING` apart
+exactly as before. Between them there is a clearing of `3 * TREE_SPACING`.
 
 Three spacings, not two, is a judgement about feel rather than safety — a 460px gap is
 also too wide to jump, but it reads as "two trees got deleted", whereas 690 is most of a
@@ -74,13 +76,20 @@ screen width and reads as open ground. This was the choice between candidate lay
 the sparser one was picked deliberately.
 
 ```
-|   T   T             P    T   R             T   T   |
+|   T   T             P    T   R    T            T   |
 
 left copse    290,  520
-centre copse  1210, 1440, 1670      <- both fighters start here
-right copse   2360, 2590
+centre copse  1210, 1440, 1670, 1900      <- both fighters start here
+lone tree     2590
 clearings     690px, twice
 ```
+
+The lone tree at 2590 is a climbable dead end: the nearest trunk is a clearing away, so
+you can go up it but you cannot leap out of it. That is a different kind of place from a
+copse, and it costs no rules — only the tuple.
+
+The centre copse runs to 1900 rather than stopping at 1670, which is not a cosmetic
+choice. See *What nearly broke this* below.
 
 Every trunk still sits on the old grid — this is the grid with two of every five removed —
 so `PLAYER_START` (1210) and `RIVAL_START` (1670) keep their trunks and no other geometry
@@ -93,7 +102,7 @@ TREE_SPACING = 230          # within a copse — the distance a treetop jump cle
 CLEARING = 3 * TREE_SPACING # 690 — wider than any jump, so leaving a copse means walking
 
 # Each copse is (leftmost trunk, how many trunks).
-COPSES = ((290, 2), (1210, 3), (2360, 2))
+COPSES = ((290, 2), (1210, 4), (2590, 1))
 TREES = tuple(first + i * TREE_SPACING
               for first, count in COPSES
               for i in range(count))
@@ -126,22 +135,55 @@ clearing now costs you the trees: you come down, and you walk.
 That is a new tactical shape in the game and it needed no new code. A copse is a place you
 can move around in the air; the clearing between them is ground you have to cross on foot.
 
+## What nearly broke this: trees feed the rival's jumping
+
+The first version of this layout was three copses of 2-3-2 — seven trees, the same count,
+with the centre copse stopping at 1670. It failed
+`test_the_rival_really_climbs_when_it_climbs`, a guard added the same evening in `1a6f78a`
+from Juliana's complaint *"the rival didn't jump very much or really climb at all"*.
+
+**A rival can only launch a jump from up a trunk, so trunk density sets its jump rate.**
+
+| Layout | Trees | Rival jumps/min (guard needs >8) |
+| --- | --- | --- |
+| 11 uniform | 11 | 8.9 |
+| 2-3-2 | 7 | **6.1 — fails** |
+| 2-4-1 (this design) | 7 | 8.9 |
+
+Two of Juliana's own findings pull against each other here: *fewer trees* starves the thing
+that fixed *"the rival didn't jump much"*. It is the same shape as the `GROUND_WHIMS` /
+`TRUNK_WHIMS` tension already recorded in the handoff — two pieces of play feedback that
+cannot both be satisfied by turning one knob further.
+
+What resolves it is **where** the trees are, not how many. The rival is leashed to within
+`LEASH` of the player, so only trunks inside that window can ever affect it; with the
+player at `PLAYER_START` the window is roughly 510–1910. Layouts that differ only outside
+it produce byte-identical simulations. The trunk at **1900** is the one carrying the jump
+rate, which is why the centre copse runs to 1900 and the thinning is taken out of the
+right-hand side instead.
+
+**The lesson worth keeping:** tree *count* is not the tunable thing — trunk count inside
+the leash window is. A future thinning that leaves the centre copse alone is free; one that
+narrows it is not.
+
 ## Testing
 
-Two existing tests fail, and both because they encode "the grid" — the thing being
-deleted.
+Measured against the real suite, layout 2-4-1 breaks exactly **one** existing test. The
+other 169 pass, including the rival-climbing guard above.
 
 **`test_trees_are_spaced_for_jumping`** asserts that the set of all gaps is exactly
 `{TREE_SPACING}`. It becomes two assertions: neighbours *within* a copse are
 `TREE_SPACING` apart, and every gap *between* copses equals `CLEARING` — which is both the
 sparseness the change is for and the check that keeps `CLEARING` honest.
 
-**`test_a_jump_from_up_a_tree_catches_the_next_one`** hardcodes `TREES[4]`, which is now a
-copse edge — so it would fail, correctly but for the wrong reason. It and
-`test_a_ground_jump_does_not_reach_the_next_tree` get a small test helper returning "a
-trunk with a copse-neighbour to its right", so they state the condition they need rather
-than trusting an index to keep meaning the same thing. This is the handoff's own *test
-behaviour, not distances* lesson: an index into `TREES` is a disguised distance.
+**`test_a_jump_from_up_a_tree_catches_the_next_one`** keeps passing, but only by luck. It
+hardcodes `TREES[4]`, which is 1670 under both layouts, and 1670 happens to still have a
+neighbour at 1900 — under the rejected 2-3-2 it was a copse edge and the test failed. A
+test that passes by coincidence is the kind that stops guarding anything quietly, so it and
+`test_a_ground_jump_does_not_reach_the_next_tree` get a small helper returning "a trunk
+with a copse-neighbour to its right", stating the condition they need instead of trusting
+an index to keep meaning the same thing. This is the handoff's own *test behaviour, not
+distances* lesson: **an index into `TREES` is a disguised distance.**
 
 **One test is added** for the new rule: a treetop jump from a copse edge into a clearing
 lands in the dirt. Without it, nothing stops a future tidy-up from restoring a uniform
