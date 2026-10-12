@@ -318,7 +318,10 @@ def test_the_rival_climbs_when_it_is_at_a_tree():
 def test_the_rival_cannot_climb_in_open_ground():
     rng = FakeRandom(choices=[1, 1], ints=[800, 800])
     # The middle of a clearing — now the furthest from a trunk you can stand.
-    nowhere = arena.TREES[1] + arena.CLEARING // 2
+    # Asked for by name, not as TREES[1]: an index is only a copse edge while the
+    # first copse happens to have two trunks, which is the same disguised-distance
+    # trap that TREES[4] was.
+    nowhere = trunk_on_a_copse_edge() + arena.CLEARING // 2
     _, y, _ = arena.step_wander(arena.Wander(remaining_ms=0, climb_remaining_ms=0),
                                 nowhere, 0.0, nowhere - 400, 0.0, 100, rng=rng)
     assert y == 0
@@ -347,15 +350,15 @@ def test_the_rival_wander_stays_inside_every_limit():
         assert abs(x - arena.PLAYER_START) <= arena.LEASH
 
 
-def copse_gaps():
-    """Every gap between neighbouring trunks, in order."""
+def trunk_gaps():
+    """Every gap between neighbouring trunks, in order — within copses and between."""
     return [arena.TREES[i + 1] - arena.TREES[i] for i in range(len(arena.TREES) - 1)]
 
 
 def test_trunks_in_a_copse_are_spaced_for_jumping():
     """Inside a copse the spacing is unchanged, so treetop chaining still works."""
-    assert arena.TREE_SPACING in copse_gaps()
-    assert set(copse_gaps()) == {arena.TREE_SPACING, arena.CLEARING}
+    assert arena.TREE_SPACING in trunk_gaps()
+    assert set(trunk_gaps()) == {arena.TREE_SPACING, arena.CLEARING}
 
 
 def test_a_clearing_is_wider_than_any_jump(monkeypatch):
@@ -371,9 +374,7 @@ def test_a_clearing_is_wider_than_any_jump(monkeypatch):
     """
     monkeypatch.setattr(arena, "TREES", ())
     start = float(arena.WALK_LEFT)
-    x, y, flight = start, float(arena.MAX_CLIMB), arena.launch()
-    while flight.airborne:
-        x, y, flight = arena.step_flight(flight, x, y, 1, 16, start, 99999.0)
+    x, _, _, _ = fly_until_settled(start, float(arena.MAX_CLIMB), 1)
     assert arena.CLEARING > (x - start) + arena.CATCH_REACH
 
 
@@ -387,6 +388,15 @@ def test_both_fighters_start_at_a_trunk():
     assert arena.tree_near(arena.RIVAL_START) is not None
 
 
+def has_a_jump_neighbour(trunk):
+    """Is there another trunk one jump to the right of this one?
+
+    The single fact both trunk finders are built on, so that "inside a copse" and
+    "on a copse edge" cannot drift apart into two different ideas of adjacency.
+    """
+    return trunk + arena.TREE_SPACING in arena.TREES
+
+
 def trunk_on_a_copse_edge():
     """A trunk whose right-hand neighbour is a clearing away, not a jump away.
 
@@ -394,7 +404,7 @@ def trunk_on_a_copse_edge():
     the world ends, which is not the same thing as a copse edge.
     """
     for trunk in arena.TREES[:-1]:
-        if trunk + arena.TREE_SPACING not in arena.TREES:
+        if not has_a_jump_neighbour(trunk):
             return trunk
     raise AssertionError("no copse edges — the trees are a uniform grid")
 
@@ -444,7 +454,7 @@ def trunk_with_a_neighbour_to_the_right():
     than about where the trees happen to be this week.
     """
     for trunk in arena.TREES:
-        if trunk + arena.TREE_SPACING in arena.TREES:
+        if has_a_jump_neighbour(trunk):
             return trunk
     raise AssertionError("no two trunks are a jump apart — check TREE_SPACING")
 
