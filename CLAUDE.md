@@ -21,6 +21,13 @@ Fight's battle math), it gets a `pytest` test file alongside it — run with
 `pytest <project-folder>/test_*.py`. Don't assume every project has tests; check for a
 `test_*.py` file in that project's folder.
 
+## Picking up where someone left off
+
+`docs/HANDOFF.md` holds the current state of Squirrel Fight — what's built, which numbers
+are still guesses waiting on someone actually playing it, and the traps that have already
+cost time once. Read it before changing anything in `squirrel-fight/`, and update it
+rather than starting a second handoff.
+
 ## Architecture
 
 This is a multi-project repo: each game/story lives in its own top-level folder (e.g. `word-combo-story/`) with its own entry script and a short project-level `README.md` describing what it is and how to run it. Dependencies (`requirements.txt`) and the API key (`.env`) are shared at the repo root rather than per-project — split a project out with its own requirements only if it needs something the others don't (e.g. pygame, pillow). The root `README.md` keeps a linked list of projects; add new games there too.
