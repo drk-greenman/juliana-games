@@ -317,8 +317,8 @@ def test_the_rival_climbs_when_it_is_at_a_tree():
 
 def test_the_rival_cannot_climb_in_open_ground():
     rng = FakeRandom(choices=[1, 1], ints=[800, 800])
-    # Exactly half a spacing past a trunk is the furthest you can be from one.
-    nowhere = arena.TREES[2] + arena.TREE_SPACING // 2
+    # The middle of a clearing — now the furthest from a trunk you can stand.
+    nowhere = arena.TREES[1] + arena.CLEARING // 2
     _, y, _ = arena.step_wander(arena.Wander(remaining_ms=0, climb_remaining_ms=0),
                                 nowhere, 0.0, nowhere - 400, 0.0, 100, rng=rng)
     assert y == 0
@@ -347,9 +347,34 @@ def test_the_rival_wander_stays_inside_every_limit():
         assert abs(x - arena.PLAYER_START) <= arena.LEASH
 
 
-def test_trees_are_spaced_for_jumping():
-    gaps = {arena.TREES[i + 1] - arena.TREES[i] for i in range(len(arena.TREES) - 1)}
-    assert gaps == {arena.TREE_SPACING}
+def copse_gaps():
+    """Every gap between neighbouring trunks, in order."""
+    return [arena.TREES[i + 1] - arena.TREES[i] for i in range(len(arena.TREES) - 1)]
+
+
+def test_trunks_in_a_copse_are_spaced_for_jumping():
+    """Inside a copse the spacing is unchanged, so treetop chaining still works."""
+    assert arena.TREE_SPACING in copse_gaps()
+    assert set(copse_gaps()) == {arena.TREE_SPACING, arena.CLEARING}
+
+
+def test_a_clearing_is_wider_than_any_jump(monkeypatch):
+    """Not a round number: it has to beat the furthest a jump can possibly go.
+
+    That is the ballistic reach from MAX_CLIMB plus CATCH_REACH, because a catch
+    radius adds itself to every jump's effective reach — the thing that broke the
+    tree-to-tree rule the first time these numbers were picked. With no trunks to
+    catch, the arc runs its full length.
+
+    Launched from WALK_LEFT rather than 0: `clamp_walk` pins x to the walkable
+    band, so a jump measured from outside it reads far longer than it is.
+    """
+    monkeypatch.setattr(arena, "TREES", ())
+    start = float(arena.WALK_LEFT)
+    x, y, flight = start, float(arena.MAX_CLIMB), arena.launch()
+    while flight.airborne:
+        x, y, flight = arena.step_flight(flight, x, y, 1, 16, start, 99999.0)
+    assert arena.CLEARING > (x - start) + arena.CATCH_REACH
 
 
 def test_both_fighters_start_at_a_trunk():
@@ -360,6 +385,31 @@ def test_both_fighters_start_at_a_trunk():
     """
     assert arena.tree_near(arena.PLAYER_START) is not None
     assert arena.tree_near(arena.RIVAL_START) is not None
+
+
+def trunk_on_a_copse_edge():
+    """A trunk whose right-hand neighbour is a clearing away, not a jump away.
+
+    The last trunk in the world is excluded: it has nothing to its right because
+    the world ends, which is not the same thing as a copse edge.
+    """
+    for trunk in arena.TREES[:-1]:
+        if trunk + arena.TREE_SPACING not in arena.TREES:
+            return trunk
+    raise AssertionError("no copse edges — the trees are a uniform grid")
+
+
+def test_you_cannot_leap_out_of_a_copse():
+    """The point of the whole layout, stated as what happens.
+
+    Leaping from trunk to trunk works inside a copse and runs out at its edge:
+    crossing a clearing means coming down and walking. Asserted as "lands in the
+    dirt" rather than as a distance, for the same reason as the ground-jump test.
+    """
+    _, y, flight, _ = fly_until_settled(
+        float(trunk_on_a_copse_edge()), float(arena.MAX_CLIMB), 1)
+    assert y == 0.0, "a jump across a clearing should land in the dirt"
+    assert not flight.airborne
 
 
 def out_of_the_way(x):

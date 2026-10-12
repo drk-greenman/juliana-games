@@ -58,13 +58,39 @@ RIVAL_SPEED = 90.0
 WANDER_MIN_MS = 400
 WANDER_MAX_MS = 1200
 
-# Trunks across the world. The spacing is what a jump has to clear, so it is
-# named rather than implied — see JUMP_SPEED and the reach table in the spec.
+# Trunks come in copses, not a uniform grid.
 #
-# 230 divides the 460px gap the fighters start at, so both of them begin at a
-# trunk. At 290 the player would start at a tree and the rival would not.
-TREE_SPACING = 230
-TREES = tuple(range(290, 2591, TREE_SPACING))
+# The grid had to be dense everywhere, because its pitch is pinned to the jump
+# distance: the pitch must be wide enough that a ground jump falls short and
+# narrow enough that a treetop jump reaches, AND it must divide the fighters'
+# 460px opening gap so that both of them start at a trunk. 230 is the only value
+# that does all three — so the grid was already as sparse as a grid can get, and
+# there was always a trunk within a step. Play feedback, 2026-10-11: "too many —
+# trees are everywhere", and walking to a tree had stopped being a decision.
+#
+# So the spacing stays and the uniformity goes. Inside a copse trunks are
+# TREE_SPACING apart and leaping trunk to trunk works exactly as before; between
+# copses there is a CLEARING, which no jump can cross. Leaving a copse means
+# coming down and walking.
+TREE_SPACING = 230                  # within a copse — what a treetop jump clears
+CLEARING = 3 * TREE_SPACING         # 690 — beats the 285px furthest any jump goes
+
+# Each copse is (leftmost trunk, how many trunks). Every trunk still sits where
+# the old grid put one — this is that grid with four removed — which is why
+# PLAYER_START and RIVAL_START keep their trunks and nothing else moves.
+#
+# The centre copse runs out to 1900 on purpose. A rival can only launch a jump
+# from up a trunk, and only trunks within LEASH of the player can ever affect it,
+# so trunk count inside that window sets its jump rate. Dropping 1900 takes it
+# from 8.9 jumps/min to 6.1 against the "> 8" guard in
+# `test_the_rival_really_climbs_when_it_climbs`. Thin the edges, never the middle.
+#
+# (2590, 1) is a copse of one: a climbable dead end, with no trunk within jump
+# range to leap on to.
+COPSES = ((290, 2), (1210, 4), (2590, 1))
+TREES = tuple(first + i * TREE_SPACING
+              for first, count in COPSES
+              for i in range(count))
 
 # How near a trunk you have to be to start climbing it.
 CLIMB_REACH = 60
