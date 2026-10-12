@@ -1,5 +1,17 @@
 # Squirrel Fight — Leaping Between Trees
 
+> **The numbers below are as-designed, not as-built — four of them have since moved.**
+> `AIR_SPEED` is 240, not 260. `MAX_CLIMB` is 164, not the 240 the reach table assumes.
+> A ground jump now travels 192px (not 208) and a treetop jump 265px ballistic, catching
+> the next trunk at 211px (not 316). And there are seven trees, not eleven — they were
+> regrouped into copses on 2026-10-11.
+>
+> The *reasoning* here still holds and is still why `TREE_SPACING` is 230. Only the
+> arithmetic is out of date. The project's rule is to read the spec before changing a
+> number, which makes a stale table expensive — so: for live figures, measure
+> `arena.step_flight` rather than trusting this page, and for the constraints that pin the
+> spacing, see `2026-10-11-copses-design.md`.
+
 Adds jumping and falling to the window version. Squirrels push off a trunk, arc through
 the air steering as they go, and catch the next tree along. Gravity applies only once
 you have jumped; climbing itself is unchanged.
