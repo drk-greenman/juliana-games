@@ -481,10 +481,18 @@ def test_the_rival_does_not_live_up_a_tree():
     half a minute, before the whim was weighted downwards.
 
     Stranding itself up a tree is meant to be the joke, not the default state.
+
+    What is measured here is the *stint* and how far it travels, not the share
+    of time spent off the ground. Once jumping existed, that share stopped being
+    a proxy for stuck: a rival climbing, perching, leaping and coming down is
+    off the ground half the time while never standing still. Guarding the share
+    instead is what pushed the rival to the opposite failure — see
+    `test_the_rival_really_climbs_when_it_climbs`.
     """
     import random as real_random
 
-    off_ground = total = 0
+    total = 0
+    travelled = 0.0
     longest_stint_ms = 0
     for seed in range(4):
         real_random.seed(seed)
@@ -492,20 +500,21 @@ def test_the_rival_does_not_live_up_a_tree():
         x, y = float(arena.RIVAL_START), 0.0
         stint_ms = 0
         for _ in range(60 * 60):            # a minute of play at 60fps
+            previous_x = x
             x, y, wander, flight = arena.step_rival(
                 wander, flight, x, y, arena.PLAYER_START, 0.0, 16)
+            travelled += abs(x - previous_x)
             total += 1
             if y > 0:
-                off_ground += 1
                 stint_ms += 16
                 longest_stint_ms = max(longest_stint_ms, stint_ms)
             else:
                 stint_ms = 0
 
-    assert off_ground / total < 0.45, (
-        "rival spent {:.0%} of the fight off the ground".format(off_ground / total))
     assert longest_stint_ms < 12000, (
         "rival spent {:.1f}s up a tree in one go".format(longest_stint_ms / 1000))
+    assert travelled / (total / 3600) > 2500, (
+        "rival covered only {:.0f}px a minute".format(travelled / (total / 3600)))
 
 
 def test_chained_jumps_cannot_ratchet_a_squirrel_off_the_top():
@@ -535,3 +544,43 @@ def test_chained_jumps_cannot_ratchet_a_squirrel_off_the_top():
 
     assert peak <= ceiling + 1, (
         "reached {:.0f}px against a ceiling of {:.0f}".format(peak, ceiling))
+
+
+def test_the_rival_really_climbs_when_it_climbs():
+    """Going up a trunk has to be a commitment, not a twitch.
+
+    Weighting the whim downwards stopped the rival living up a tree, but a
+    walk pulled down hard never gets anywhere either — it bobs at the foot of
+    a trunk, spending 2% of the fight above 120px, and the jump it could only
+    launch from up there almost never fires. Reported from play as "the rival
+    didn't jump very much or really climb at all".
+
+    This test and `test_the_rival_does_not_live_up_a_tree` pull in opposite
+    directions on purpose: together they rule out both failure modes, and a
+    plain random walk cannot satisfy both.
+    """
+    import random as real_random
+
+    high = total = jumps = 0
+    peak = 0.0
+    for seed in range(4):
+        real_random.seed(seed)
+        wander, flight = arena.Wander(), arena.Flight()
+        x, y = float(arena.RIVAL_START), 0.0
+        was_airborne = False
+        for _ in range(60 * 120):           # two minutes of play
+            x, y, wander, flight = arena.step_rival(
+                wander, flight, x, y, arena.PLAYER_START, 0.0, 16)
+            total += 1
+            peak = max(peak, y)
+            if y > 120:
+                high += 1
+            if flight.airborne and not was_airborne:
+                jumps += 1
+            was_airborne = flight.airborne
+
+    assert peak > arena.MAX_CLIMB * 0.8, "never got near the top of a trunk"
+    assert high / total > 0.05, (
+        "spent only {:.1%} of the fight high up a trunk".format(high / total))
+    assert jumps / (total / 3600) > 8, (
+        "only jumped {:.1f} times a minute".format(jumps / (total / 3600)))

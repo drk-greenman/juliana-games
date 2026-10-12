@@ -93,9 +93,23 @@ CLIMB_CLEARANCE = 60
 CLIMB_SPEED = 160.0
 RIVAL_CLIMB_SPEED = 70.0
 
-# How long one of the rival's vertical whims lasts.
+# How long one of the rival's vertical pauses lasts.
 CLIMB_MIN_MS = 300
 CLIMB_MAX_MS = 900
+
+# How long a committed run up or down a trunk lasts. Covering MAX_CLIMB at
+# RIVAL_CLIMB_SPEED takes 164/70 = 2.3s, so the shortest run still reaches the
+# top: that is the point of these being much longer than a pause. Much longer
+# again and it just parks at the top once the climb has topped out.
+CLIMB_RUN_MIN_MS = 2400
+CLIMB_RUN_MAX_MS = 3200
+
+# What the rival feels like doing next, vertically. Drawn from one of these
+# depending on where it is: rarely start a climb from the ground, and once up a
+# trunk mostly head back down. These two sets are the knob for how tree-happy
+# the rival is — see the two tests that bracket it from both sides.
+GROUND_WHIMS = (0, 0, 0, 0, 0, 1)
+TRUNK_WHIMS = (-1, -1, -1, 0)
 
 # How long between the rival considering a jump.
 JUMP_MIN_MS = 700
@@ -295,15 +309,23 @@ def step_wander(wander, rival_x, rival_y, player_x, player_y, dt_ms, rng=random)
     climb_direction = wander.climb_direction
     climb_remaining = wander.climb_remaining_ms - dt_ms
     if climb_remaining <= 0:
-        # Weighted towards *going down*, which is not the same as being weighted
-        # towards 0. This used to be (-1, 0, 0, 1), which averages zero: height
-        # became an aimless walk between the ground and the treetop, and that
-        # sits at every height equally. The rival clung to a trunk 71% of the
-        # fight — and it can't walk while it's off the ground, so the whole
-        # fight stopped moving. `test_the_rival_does_not_live_up_a_tree` guards
-        # the mean staying negative.
-        climb_direction = rng.choice((-1, -1, -1, -1, -1, -1, 0, 1))
-        climb_remaining = rng.randint(CLIMB_MIN_MS, CLIMB_MAX_MS)
+        # Which way depends on where it already is, because a single weighted
+        # draw cannot do this job. Drawn from a zero-mean set the height is an
+        # aimless walk that sits at every height equally, and the rival lives up
+        # the tree (71% of the fight, unable to walk, fight dead). Pulled down
+        # hard instead, it never commits and just bobs at the foot of a trunk —
+        # above 120px only 2% of the time, so the jump it can only launch from
+        # up there never fires. Both were reported from play.
+        #
+        # So: on the ground it rarely starts a climb, but a climb it starts is a
+        # committed run up the trunk; up a trunk it mostly heads back down, and
+        # a pause is what gives it time to decide to jump.
+        climb_direction = rng.choice(TRUNK_WHIMS if rival_y > 0 else GROUND_WHIMS)
+        # A run has to be long enough to actually cover the trunk; a whim as
+        # short as a pause is what made it twitch instead of climb.
+        climb_remaining = (rng.randint(CLIMB_RUN_MIN_MS, CLIMB_RUN_MAX_MS)
+                           if climb_direction
+                           else rng.randint(CLIMB_MIN_MS, CLIMB_MAX_MS))
 
     y = rival_y
     if tree_near(rival_x) is not None or rival_y > 0:
