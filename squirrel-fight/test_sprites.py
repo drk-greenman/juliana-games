@@ -75,6 +75,24 @@ def test_only_squirrels_are_offered_as_fighters(tmp_path, monkeypatch):
     assert sprites.available_squirrels() == {"john-cena", "big-bumboy"}
 
 
+def test_the_real_assets_folder_offers_exactly_the_rivals():
+    """The same rule, checked against the drawings that actually exist.
+
+    The test above builds its own folder, so it can only catch art it was told
+    about — and that is precisely how `app-icon.png` came to be dealt as a
+    fighter: added for the Desktop app, never reserved, invisible to a synthetic
+    test. This one reads `assets/` itself, so anything new and unreserved fails
+    here without anyone having to remember to list it.
+
+    Equality, not a subset, so it also catches a rival whose drawing went
+    missing — `make_sprites.py` and `RIVAL_NAMES` have to stay in step.
+    """
+    import sprites
+    from game import RIVAL_NAMES
+
+    assert sprites.available_squirrels() == {sprites.slug(name) for name in RIVAL_NAMES}
+
+
 def test_available_backgrounds_finds_every_scene(tmp_path, monkeypatch):
     import sprites
 

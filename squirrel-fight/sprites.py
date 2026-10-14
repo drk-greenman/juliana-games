@@ -43,8 +43,13 @@ ART_FACES_RIGHT = False
 # Stems in `assets/` that name something other than an individual squirrel, so
 # `available_squirrels()` doesn't offer them as fighters. Anything new that is
 # art but not a squirrel belongs here — `tree.png` was missed once already, and
-# a drawn tree would have turned up in a duel.
-RESERVED_STEMS = {"background", "tree"}
+# a drawn tree would have turned up in a duel. So was `app-icon.png`, added for
+# the Desktop app, which really did get dealt as a fighter.
+#
+# `test_the_real_assets_folder_offers_exactly_the_rivals` now reads `assets/`
+# itself, so a new unreserved drawing fails there rather than waiting to be
+# noticed mid-duel.
+RESERVED_STEMS = {"background", "tree", "app-icon"}
 RESERVED_PREFIXES = ("player_", "rival_", "background-")
 
 # Body colours for the code-drawn stand-in squirrels, so the two fighters are
