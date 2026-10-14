@@ -181,13 +181,13 @@ it first rather than trusting line numbers from a plan written ten minutes ago.
    anything above. She doesn't need to diagnose — "this bit is annoying" is the useful
    signal. Specifically worth watching: whether the thinning registers at all, given the
    opening screen barely changed.
-2. **Merge `squirrel-copses` and push.** The copse work is on that branch, not `main`.
-3. **More scenes**, if wanted: drop `background-<place>.png` into `assets/` and it is found
+2. **More scenes**, if wanted: drop `background-<place>.png` into `assets/` and it is found
    automatically. Template at `source-art/background-template.png`, 240×110, white = see-through.
 
 **Deliberately parked:** ground props — bush, log, mud (the unbuilt half of sub-project 3).
 They would add rules on top of rules that have had almost no play between them. Leave them
 until the six features already in have been lived with.
 
-Also outstanding and trivial: the stale `squirrel-fight-visuals` branch still exists on the
-remote, fully merged.
+Nothing is outstanding in the repo itself: `main` is pushed and in sync, the working tree
+is clean, and both merged branches (`squirrel-copses`, `squirrel-fight-visuals`) have been
+deleted locally and on the remote.
