@@ -67,23 +67,34 @@ The sixth was the real finding: there was always a trunk within a step, so walki
 tree was never a decision. Fixed by breaking up the grid — see
 `docs/superpowers/specs/2026-10-11-copses-design.md`.
 
+### The copses worked — played 2026-10-13
+
+**"It worked."** The forest reads thinner, and the clearings are noticeable as their own
+kind of place rather than as a few trees having gone missing. The question the whole change
+existed to answer is answered: walking to a tree is a decision again.
+
+**A prediction that was wrong, in the useful direction.** This document argued twice that
+the thinning might not register, because every battle opens inside the centre copse and the
+opening screen only went from 5 trunks to 4 — the rival's jump guard forces trunks into
+exactly the window the opening camera frames. That worry was real but it did not matter:
+what registers is apparently the *travelling*, not the opening frame. Worth remembering
+before anyone redesigns the opening geometry to "fix" a problem play says isn't there.
+
+Note this took **two** play sessions, and the first one said the opposite — see the play
+worktree trap below. The first report was *"didn't notice anything about the trees being
+different"*, which read exactly like this prediction coming true. It was a stale build.
+
 ### Still unplayed
 
-The copses themselves:
-
-- **Does the thinning even register?** Every battle opens inside the centre copse, so the
-  opening screen still shows 4 trunks against the old 5. This is forced, not an oversight:
-  the rival's jump guard needs trunks inside the leash window, and the opening camera
-  frames exactly that window. No layout that passes the guard shows fewer than 4. The
-  forest thins where the fight *travels*, not where it starts.
 - Does being caught in a clearing, with the rival up a trunk, feel unfair?
-- Is the lone tree at 2590 a trap worth having, or just a tree nobody visits?
+- Is the lone tree at 2590 a trap worth having, or just a tree nobody visits? Not visited
+  yet in two sessions, which is itself mildly suggestive.
 - **Painted trees are not climbable trees.** The background art contains drawn trees; only
   the 7 trunks in `TREES` can be climbed. At 11 trunks the real ones outnumbered the
   painted ones and at 7 they do not, so "I tried to climb that tree and couldn't" is now a
   likelier complaint. Pre-existing, but thinning made it easier to trip over.
 
-**This loop already works.** Three rounds of it so far, none of them findable by reasoning:
+**This loop already works.** Four rounds of it so far, none of them findable by reasoning:
 
 1. *"The rival keeps getting stuck on trees."* Its vertical whim averaged zero, so height
    was an aimless walk that sits at every height equally: it clung to a trunk 71% of the
@@ -98,6 +109,15 @@ The copses themselves:
    mid-air returned the catch height uncapped, so chained jumps each launched from the
    last one's apex and ratcheted ~73px higher forever — 3531px against a 240px budget.
    Fixed in `b6ff85b` by capping a grip at `MAX_CLIMB`.
+4. *"Is the icon supposed to be used as my fighter?"* It was not. `app-icon.png` went into
+   `assets/` with the Desktop app and was never added to `RESERVED_STEMS`, so
+   `available_squirrels()` offered it as a thirteenth squirrel either side could borrow.
+   Fixed in `a6f0abc`. This is the *second* time an unreserved drawing was dealt as a
+   fighter — `tree.png` was the first — and the test guarding the rule could not catch
+   either, because it builds a synthetic folder from a hardcoded list of filenames and so
+   only ever sees art someone remembered to tell it about.
+   **A test that invents its own inputs cannot catch a real input nobody listed.**
+   `test_the_real_assets_folder_offers_exactly_the_rivals` now reads `assets/` itself.
 
 Findings 1 and 2 are opposite failures of the same knob, and the two tests that bracket
 them (`test_the_rival_does_not_live_up_a_tree`, `test_the_rival_really_climbs_when_it_climbs`)
@@ -196,16 +216,15 @@ it first rather than trusting line numbers from a plan written ten minutes ago.
 
 ## What's next
 
-1. **Juliana plays the copses — for real this time.** The first attempt did not count: the
-   Desktop app was playing a worktree pinned five commits back, so she played the old
-   eleven-tree grid and correctly reported no difference. The worktree is now on `main` and
-   the app rebuilt against it, so the 7-tree layout is finally in front of her.
+**The copse work is finished and has play behind it.** Nothing is outstanding from it.
 
-   Still the highest-value thing by a distance. She doesn't need to diagnose — "this bit is
-   annoying" is the useful signal. Worth watching specifically: whether the thinning
-   registers at all, given the opening screen only went from 5 trunks to 4.
+1. **Keep playing, and keep saying what's annoying.** It is still the highest-value thing
+   by a distance — four rounds, four findings, none of them reachable by reasoning. Two
+   small things remain unanswered above: whether a clearing feels unfair when the rival is
+   up a trunk, and whether the lone tree ever gets used.
 2. **More scenes**, if wanted: drop `background-<place>.png` into `assets/` and it is found
    automatically. Template at `source-art/background-template.png`, 240×110, white = see-through.
+   Remember to reserve the stem if a new drawing is *not* a squirrel — finding 4 above.
 
 **Deliberately parked:** ground props — bush, log, mud (the unbuilt half of sub-project 3).
 They would add rules on top of rules that have had almost no play between them. Leave them
