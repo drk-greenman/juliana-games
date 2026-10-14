@@ -144,6 +144,25 @@ currently on the Desktop was built pointing at the **`juliana-games-play` worktr
 this checkout, which is why a change made here doesn't show up when Juliana double-clicks.
 Rebuild with that folder as the argument to keep it that way.
 
+**And the play worktree is a *detached* checkout — it does not follow `main`.** Merging and
+pushing changes nothing about what Juliana plays; the worktree has to be moved deliberately
+(`cd ../juliana-games-play && git checkout --detach main`) and the app rebuilt afterwards.
+
+This has already cost a full round of play feedback. The copses shipped, Juliana played,
+and reported *"didn't notice anything about the trees being different"* — which read
+exactly like the predicted "the thinning is too subtle to register". It wasn't: the play
+worktree was pinned five commits back at `b41275b` and still had all eleven trees. The
+feedback was real and the conclusion would have been completely wrong.
+
+**So: when play feedback says a change had no effect, check what commit the play copy is on
+before you believe it.**
+
+```bash
+git -C ../juliana-games-play log --oneline -1
+python3 -c "import sys; sys.path.insert(0,'../juliana-games-play/squirrel-fight'); \
+import arena; print(len(arena.TREES), 'trees')"
+```
+
 **Test behaviour, not distances.** Both bugs above were invisible to tests that measured
 how far a jump went, and obvious to tests that asserted "lands in the dirt" or "catches the
 next trunk". A corollary learned while thinning the trees: **an index into `TREES` is a
@@ -177,10 +196,14 @@ it first rather than trusting line numbers from a plan written ten minutes ago.
 
 ## What's next
 
-1. **Juliana plays the copses.** Highest value by a distance, and the only way to answer
-   anything above. She doesn't need to diagnose — "this bit is annoying" is the useful
-   signal. Specifically worth watching: whether the thinning registers at all, given the
-   opening screen barely changed.
+1. **Juliana plays the copses — for real this time.** The first attempt did not count: the
+   Desktop app was playing a worktree pinned five commits back, so she played the old
+   eleven-tree grid and correctly reported no difference. The worktree is now on `main` and
+   the app rebuilt against it, so the 7-tree layout is finally in front of her.
+
+   Still the highest-value thing by a distance. She doesn't need to diagnose — "this bit is
+   annoying" is the useful signal. Worth watching specifically: whether the thinning
+   registers at all, given the opening screen only went from 5 trunks to 4.
 2. **More scenes**, if wanted: drop `background-<place>.png` into `assets/` and it is found
    automatically. Template at `source-art/background-template.png`, 240×110, white = see-through.
 
