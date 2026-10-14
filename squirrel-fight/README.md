@@ -75,6 +75,32 @@ has, with every move always reaching.
 
 Neither version needs an API key. Both are fully offline.
 
+## Play from the Desktop
+
+The window version also comes as a Mac app you can keep on the Desktop and
+double-click, so playing doesn't mean typing anything:
+
+```bash
+python3 squirrel-fight/make_app.py
+```
+
+That builds `Squirrel Fight.app` onto your Desktop, with `assets/app-icon.png`
+as its icon. The app remembers the folder it was built from, so pass a different
+one if the game should run from somewhere else:
+
+```bash
+python3 squirrel-fight/make_app.py ../juliana-games-play/squirrel-fight
+```
+
+**Draw your own icon** and run `make_app.py` again to change it. Save it as
+`assets/app-icon.png`, and draw it **square, on a see-through background** —
+this is the one place transparency is wanted rather than the pure white the
+backgrounds use. Pixel art and freehand both work, same as the squirrels.
+
+The app gets no Terminal, so anything the game prints lands in
+`~/Library/Logs/squirrel-fight.log` — that's where the traceback will be if it
+ever refuses to start.
+
 ## Drawing your own squirrels
 
 Drop PNG files into `squirrel-fight/assets/` and they show up next run — no code
@@ -201,3 +227,4 @@ playing it.
 | `visual_game.py` | The window version |
 | `choreography.py` | Turns a resolved turn into animation. Pure, no pygame |
 | `sprites.py` | Loads drawings, falls back to code-drawn squirrels |
+| `make_app.py` | Builds the Desktop app from `assets/app-icon.png` |

@@ -7,7 +7,8 @@ traps** — the things that aren't visible from the code.
 
 ## Right now
 
-- Branch `squirrel-copses` (not yet merged), **172 tests passing**, working tree clean.
+- Branch `main`, **172 tests passing**. The copse work is merged; `main` is ahead of
+  `origin` and not yet pushed.
 - Everything that was planned is built. No half-finished work.
 - Two ways to play, one rules engine:
   - `python3 squirrel-fight/game.py` — terminal, deliberately unchanged all along
@@ -27,6 +28,7 @@ number keys or click pick a move · Esc quits.
 | **Jumping** | Space; leap trunk to trunk, steer mid-air, catch a trunk on the way down. |
 | **Backgrounds** | Three scenes dealt across the world per battle. |
 | **Borrowed scenery** | A CC0 autumn forest, plus a climbable trunk cut from the same art. |
+| **Desktop app** | `make_app.py` builds `Squirrel Fight.app` onto the Desktop from Juliana's `assets/app-icon.png`. |
 
 Every spec is in `docs/superpowers/specs/`, every plan in `docs/superpowers/plans/`. The
 specs explain *why* each number is what it is; read the spec before changing one.
@@ -132,6 +134,15 @@ the centre copse out to 1900 restored it to 8.9. **The tunable quantity is trunk
 the leash window, not trees in the world — thin the edges, never the middle.** This is the
 same shape as findings 1 and 2 above: two pieces of play feedback pulling opposite ways on
 one knob.
+
+**The Desktop app can't be patched in place, and it plays a different checkout.** The
+bundle is ad-hoc code-signed, so editing anything inside it — dropping in a new `.icns`
+being the obvious temptation — breaks the seal and macOS refuses to open it as "damaged".
+`make_app.py` therefore rebuilds the whole bundle and re-signs it; Finder also caches icons
+per bundle, so the app is touched at the end or it goes on showing the old picture. The app
+currently on the Desktop was built pointing at the **`juliana-games-play` worktree**, not
+this checkout, which is why a change made here doesn't show up when Juliana double-clicks.
+Rebuild with that folder as the argument to keep it that way.
 
 **Test behaviour, not distances.** Both bugs above were invisible to tests that measured
 how far a jump went, and obvious to tests that asserted "lands in the dirt" or "catches the
